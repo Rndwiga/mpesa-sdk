@@ -57,9 +57,11 @@ class MpesaB2CCalls extends MpesaApiConnection
 
         if (!is_null($applicationStatus)){
             $this->ApplicationStatus = $applicationStatus;
+            return $this;
         }else{
-            $status = env('MMT_MPESA_B2C_INTEGRATION_STATUS') ? env('MMT_MPESA_B2C_INTEGRATION_STATUS') : 'sandbox';
+            $status = env('B2C_INTEGRATION_IS_LIVE') ? env('B2C_INTEGRATION_IS_LIVE') : false;
             $this->ApplicationStatus = $status;
+            return $this;
         }
 
     }
@@ -116,10 +118,7 @@ class MpesaB2CCalls extends MpesaApiConnection
 
         if (env('MMT_MPESA_B2C_INITIATOR_PASSWORD')){
 
-            $liveStatus= $this->ApplicationStatus == 'live' ? true : false;
-
-            return self::generateSecurityCredentials(env('MMT_MPESA_B2C_INITIATOR_PASSWORD'),$liveStatus);
-            //return self::generateSecurityCredentials(config('gateway.module.gateway.mpesa.b2c.InitiatorPassword'));
+            return self::generateSecurityCredentials(env('MMT_MPESA_B2C_INITIATOR_PASSWORD'),$this->ApplicationStatus);
         }else{
             throw new Exception("initiator password not set for credential generation");
         }
@@ -142,7 +141,6 @@ class MpesaB2CCalls extends MpesaApiConnection
         }else{
             throw new Exception("b2c consumer key not set");
         }
-        //return config('gateway.module.gateway.mpesa.b2c.B2cConsumerKey');
     }
     public function setConsumerSecret($consumerSecret){
         $this->ConsumerSecret = $consumerSecret;
@@ -377,22 +375,20 @@ class MpesaB2CCalls extends MpesaApiConnection
      * @return string
      */
     public function b2c($Amount, $PartyB){
-        //$live=config('gateway.module.gateway.mpesa.b2c.is_live');
-        $live= $this->ApplicationStatus == 'live' ? true : false;
 
-        if(!isset($live)){
+        if(!isset($this->ApplicationStatus)){
             die("please declare the application status as defined in the documentation");
         }
 
-        if( $live == true){
+        if( $this->ApplicationStatus == true){
             $url = 'https://api.safaricom.co.ke/mpesa/b2c/v1/paymentrequest';
-        }elseif ($live== false){
+        }elseif ($this->ApplicationStatus== false){
             $url = 'https://sandbox.safaricom.co.ke/mpesa/b2c/v1/paymentrequest';
         }else{
             return json_encode(["Message"=>"invalid application status"]);
         }
 
-        $token = $this->generateAccessToken($live,$this->ConsumerKey,$this->ConsumerSecret);
+        $token = $this->generateAccessToken($this->ApplicationStatus,$this->ConsumerKey,$this->ConsumerSecret);
 
         $curl = curl_init();
         curl_setopt($curl, CURLOPT_URL, $url);

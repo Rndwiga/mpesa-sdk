@@ -132,6 +132,13 @@ class B2CTransactionCallbacks
      * @param $callbackJSONData
      * @return string
      */
+    /**
+    {"Result":{"ResultType":0,"ResultCode":2028,"ResultDesc":"The request is not permitted according to product assignment.","OriginatorConversationID":"11275-5130496-1","ConversationID":"AG_20180815_0000629f171b236a65ee","TransactionID":"MHF03D1KZ8","ReferenceData":{"ReferenceItem":{"Key":"QueueTimeoutURL","Value":"http:\/\/internalapi.safaricom.co.ke\/mpesa\/b2cresults\/v1\/submit"}}}}
+
+     *
+     * @param $callbackJSONData
+     * @return string
+     */
 
     public function processB2CFailedRequest($callbackJSONData){
         $callbackData=json_decode($callbackJSONData);
