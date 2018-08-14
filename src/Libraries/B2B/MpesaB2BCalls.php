@@ -10,7 +10,7 @@ namespace Rndwiga\Mpesa\Libraries\B2B;
 
 
 use Exception;
-use Rndwiga\Payment\Gateway\Libraries\Mpesa\MpesaApiConnection;
+use Rndwiga\Mpesa\Libraries\MpesaApiConnection;
 
 class MpesaB2BCalls extends MpesaApiConnection
 {
