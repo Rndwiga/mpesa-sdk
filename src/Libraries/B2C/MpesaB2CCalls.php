@@ -101,8 +101,6 @@ class MpesaB2CCalls extends MpesaApiConnection
         }else{
             throw new Exception("initiator password not set");
         }
-
-        //return config('gateway.module.gateway.mpesa.b2c.InitiatorPassword');
     }
 
     public function setSecurityCredential($securityCredential){
@@ -387,8 +385,9 @@ class MpesaB2CCalls extends MpesaApiConnection
         }else{
             return json_encode(["Message"=>"invalid application status"]);
         }
-
         $token = $this->generateAccessToken($this->ApplicationStatus,$this->ConsumerKey,$this->ConsumerSecret);
+
+
 
         $curl = curl_init();
         curl_setopt($curl, CURLOPT_URL, $url);
