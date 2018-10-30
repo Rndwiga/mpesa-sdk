@@ -1,7 +1,7 @@
 {
     "name": "rndwiga/mpesa-sdk",
     "type": "package",
-    "description": "Authentication package for laravel projects.",
+    "description": "An opinionated approach to Mpesa API implementation",
     "keywords": ["ui", "rndwiga",  "mpesa", "tyondo", "laravel","safaricom","B2C", "C2B","B2B","EXPRESS"],
     "homepage": "https://github.com/Rndwiga/",
     "authors": [

@@ -1,3 +1,3 @@
-# Laravel Safaricom-Mpesa SDK
+# PHP - Safaricom-Mpesa SDK
 
 ##usage

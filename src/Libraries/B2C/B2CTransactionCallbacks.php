@@ -27,8 +27,89 @@ class B2CTransactionCallbacks
             /*
              * Log the transaction
              */
+
             return $this->processB2CFailedRequest($requestCallback);
         }
+    }
+
+    /**
+    {
+    "Result": {
+    "ResultType": 0,
+    "ResultCode": 0,
+    "ResultDesc": "The service request is processed successfully.",
+    "OriginatorConversationID": "25773-1299115-1",
+    "ConversationID": "AG_20180903_00005efc187c4b350a69",
+    "TransactionID": "MI31FXT9ZP",
+    "ResultParameters": {
+    "ResultParameter": [
+    {
+    "Key": "TransactionAmount",
+    "Value": 19000
+    },
+    {
+    "Key": "TransactionReceipt",
+    "Value": "MI31FXT9ZP"
+    },
+    {
+    "Key": "ReceiverPartyPublicName",
+    "Value": "254728309492 - MOGOKO ROBERT AMEMBA"
+    },
+    {
+    "Key": "TransactionCompletedDateTime",
+    "Value": "03.09.2018 12:40:07"
+    },
+    {
+    "Key": "B2CUtilityAccountAvailableFunds",
+    "Value": 4986599
+    },
+    {
+    "Key": "B2CWorkingAccountAvailableFunds",
+    "Value": 0
+    },
+    {
+    "Key": "B2CRecipientIsRegisteredCustomer",
+    "Value": "Y"
+    },
+    {
+    "Key": "B2CChargesPaidAccountAvailableFunds",
+    "Value": 0
+    }
+    ]
+    },
+    "ReferenceData": {
+    "ReferenceItem": {
+    "Key": "QueueTimeoutURL",
+    "Value": "http://internalapi.safaricom.co.ke/mpesa/b2cresults/v1/submit"
+    }
+    }
+    }
+    }
+     * @param $callbackJSONData
+     * @return false|string
+     */
+    public function processB2CRequestCallback($callbackJSONData){
+
+        $callbackData=json_decode($callbackJSONData);
+        return json_encode([
+            "status" => 'success',
+            "data" => [
+                "resultType"=>$callbackData->Result->ResultType,
+                "resultCode"=>$callbackData->Result->ResultCode,
+                "resultDesc"=>$callbackData->Result->ResultDesc,
+                "originatorConversationID"=>$callbackData->Result->OriginatorConversationID,
+                "conversationID"=>$callbackData->Result->ConversationID,
+                "transactionID"=>$callbackData->Result->TransactionID,
+                "transactionAmount"=>$callbackData->Result->ResultParameters->ResultParameter[0]->Value,
+                "transactionReceipt"=>$callbackData->Result->ResultParameters->ResultParameter[1]->Value,
+                "receiverPartyPublicName"=>$callbackData->Result->ResultParameters->ResultParameter[2]->Value,
+                "transactionCompletedDateTime"=>$callbackData->Result->ResultParameters->ResultParameter[3]->Value,
+                "b2CUtilityAccountAvailableFunds"=>$callbackData->Result->ResultParameters->ResultParameter[4]->Value,
+                "b2CWorkingAccountAvailableFunds"=>$callbackData->Result->ResultParameters->ResultParameter[5]->Value,
+                "b2CRecipientIsRegisteredCustomer"=>$callbackData->Result->ResultParameters->ResultParameter[6]->Value,
+                "b2CChargesPaidAccountAvailableFunds"=>$callbackData->Result->ResultParameters->ResultParameter[7]->Value,
+            ]
+        ]);
     }
 
 
@@ -88,7 +169,8 @@ class B2CTransactionCallbacks
     }
      * @return string
      */
-    public function processB2CRequestCallback($callbackJSONData){
+
+    public function processB2CRequestCallbackDemo($callbackJSONData){
 
         $callbackData=json_decode($callbackJSONData);
         return json_encode([
@@ -111,6 +193,10 @@ class B2CTransactionCallbacks
             ]
         ]);
     }
+
+
+
+
 
     /**
      * {

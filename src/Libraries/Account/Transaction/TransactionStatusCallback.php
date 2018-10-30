@@ -8,15 +8,22 @@
 
 namespace Rndwiga\Mpesa\Libraries\Account;
 
-class TransactionStatusCallback
+use Rndwiga\Mpesa\Libraries\MpesaBaseClass;
+
+class TransactionStatusCallback extends MpesaBaseClass
 {
     /**
      * Use this function to process the Transaction status request callback
-     * @return string
+     * @return array
      */
-    public static function processTransactionStatusRequestCallback(){
-        $callbackJSONData=file_get_contents('php://input');
-        $callbackData=json_decode($callbackJSONData);
+    public function processTransactionStatusRequestCallback(array $resultArray){
+       // $callbackJSONData=file_get_contents('php://input');
+
+       // return $resultArray;
+        $callbackData=json_encode($resultArray);
+        $callbackData=json_decode($callbackData);
+
+        $resultType=$callbackData->Result->ResultType;
         $resultCode=$callbackData->Result->ResultCode;
         $resultDesc=$callbackData->Result->ResultDesc;
         $originatorConversationID=$callbackData->Result->OriginatorConversationID;
@@ -28,7 +35,7 @@ class TransactionStatusCallback
         $Amount=$callbackData->Result->ResultParameters->ResultParameter[3]->Value;
         $TransactionStatus=$callbackData->Result->ResultParameters->ResultParameter[4]->Value;
         $ReasonType=$callbackData->Result->ResultParameters->ResultParameter[5]->Value;
-        $TransactionReason=$callbackData->Result->ResultParameters->ResultParameter[6]->Value;
+        $TransactionReason=isset($callbackData->Result->ResultParameters->ResultParameter[6]->Value)?$callbackData->Result->ResultParameters->ResultParameter[6]->Value:''; //
         $DebitPartyCharges=$callbackData->Result->ResultParameters->ResultParameter[7]->Value;
         $DebitAccountType=$callbackData->Result->ResultParameters->ResultParameter[8]->Value;
         $InitiatedTime=$callbackData->Result->ResultParameters->ResultParameter[9]->Value;
@@ -37,6 +44,7 @@ class TransactionStatusCallback
         $DebitPartyName=$callbackData->Result->ResultParameters->ResultParameter[12]->Value;
 
         $result=[
+            "ResultType" =>$resultType,
             "resultCode"=>$resultCode,
             "resultDesc"=>$resultDesc,
             "originatorConversationID"=>$originatorConversationID,
@@ -44,19 +52,19 @@ class TransactionStatusCallback
             "transactionID"=>$transactionID,
             "ReceiptNo"=>$ReceiptNo,
             "ConversationID"=>$ConversationID,
-            "FinalisedTime"=>$FinalisedTime,
+            "FinalisedTime"=>$this->processCompletedTime($FinalisedTime),
             "Amount"=>$Amount,
             "TransactionStatus"=>$TransactionStatus,
             "ReasonType"=>$ReasonType,
             "TransactionReason"=>$TransactionReason,
             "DebitPartyCharges"=>$DebitPartyCharges,
             "DebitAccountType"=>$DebitAccountType,
-            "InitiatedTime"=>$InitiatedTime,
+            "InitiatedTime"=>$this->processCompletedTime($InitiatedTime),
             "OriginatorConversationID"=>$OriginatorConversationID,
             "CreditPartyName"=>$CreditPartyName,
             "DebitPartyName"=>$DebitPartyName
         ];
 
-        return json_encode($result);
+        return $result;
     }
 }

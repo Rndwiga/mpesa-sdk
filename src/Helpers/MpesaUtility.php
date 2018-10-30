@@ -37,7 +37,7 @@ class MpesaUtility
     public static function logInfo($dataToLog, $fileName, $folderName = 'appLog', $method = 'debug', $maxNumberOfLines = 10000){
         self::$logger = new Logger('gateway');
         // Trim log file to a max length
-        $path = storage_path(self::createStorage($folderName).'/'.$fileName.'.log');
+        $path = storage_path(self::createStorage($folderName,true).'/'.$fileName.'.log');
         if (! file_exists($path)) {
             fopen($path, "w");
         }
@@ -67,27 +67,35 @@ class MpesaUtility
         --this function can be enhanced to look at the name for slashes so as to create subdirectories automatically
         */
         $today = null;
-        $folder = "Gateway/".$folderName; // setting the folder name
+
         if ($useDate){
             $today = date('Y-m-d'); //setting the date
+            $folder = "Gateway/".$today.'/'.$folderName; // setting the folder name
+        }else{
+            $folder = "Gateway/";
         }
 
         if (!is_dir(storage_path($folder)))
         {
             mkdir(storage_path($folder), 0777, true); //creating the folder docs if it does not already exist
         }
-        if (!is_dir(storage_path($folder).'/'. $today))
+        if (!is_dir(storage_path($folder)))
         {
             //creating folder based on day if it does not exist. If it does, it is not created
-            if (!mkdir(storage_path($folder).'/'. $today, 0777, true)) {
+            if (!mkdir(storage_path($folder), 0777, true)) {
                 die('Failed to create folders...'); // Die if the function mkdir cannot run
             }
-            return $folder.'/'.$today;
-        } elseif (is_dir(storage_path($folder).'/'. $today)){ //check if the folder is created and return it
-            return $folder.'/'.$today;
+            return $folder;
+
+        } elseif (is_dir(storage_path($folder))){ //check if the folder is created and return it
+            //return $folder.'/'.$today;
+            return $folder;
         } else {
-            return $folder.'/'.$today;				// Return the folder if its already created in the file system
+            // return $folder.'/'.$today;				// Return the folder if its already created in the file system
+
+            return $folder;
         }
+
     }
 
     /**

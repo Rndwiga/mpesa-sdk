@@ -6,17 +6,18 @@
  * Time: 3:15 PM
  */
 
-namespace Rndwiga\Mpesa\Libraries\Account;
+namespace Rndwiga\Mpesa\Libraries\Account\Reversal;
 
 class TransactionReversalCallbacks
 {
     /**
      * Use this function to process the Reversal request callback
-     * @return string
+     * @return array|string
      */
-    public static function processReversalRequestCallBack(){
-        $callbackJSONData=file_get_contents('php://input');
-        $callbackData=json_decode($callbackJSONData);
+    public function processReversalRequestCallBack(array $reversalDetailsArray){
+       // $callbackJSONData=file_get_contents('php://input');
+        $callbackData=json_encode($reversalDetailsArray);
+        $callbackData=json_decode($callbackData);
         $resultType=$callbackData->Result->ResultType;
         $resultCode=$callbackData->Result->ResultCode;
         $resultDesc=$callbackData->Result->ResultDesc;
@@ -33,7 +34,7 @@ class TransactionReversalCallbacks
             "originatorConversationID"=>$originatorConversationID
         ];
 
-        return json_encode($result);
+        return $result;
 
     }
 }

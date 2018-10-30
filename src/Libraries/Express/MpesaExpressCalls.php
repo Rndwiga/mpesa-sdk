@@ -25,21 +25,12 @@ class MpesaExpressCalls extends MpesaApiConnection
     private $AccountReference;
     private $TransactionDesc;
     private $Remark;
-
     private $ConsumerKey;
     private $ConsumerSecret;
-
     private $CheckoutRequestID;
     private $Password;
     private $Timestamp;
-
     private $ApplicationStatus;
-
-    public function __construct()
-    {
-
-    }
-
 
     /**
      * @return mixed
@@ -359,7 +350,7 @@ class MpesaExpressCalls extends MpesaApiConnection
             "CustomerMessage":"Success. Request accepted for processing"
         }
 
-   SUCCESS RESPONSE
+   FAIL RESPONSE
     {
       "Body": {
         "stkCallback": {
@@ -371,7 +362,7 @@ class MpesaExpressCalls extends MpesaApiConnection
       }
     }
 
-    FAIL RESPONSE
+    SUCCESS RESPONSE
     {
       "Body": {
         "stkCallback": {
@@ -525,6 +516,123 @@ class MpesaExpressCalls extends MpesaApiConnection
             return $curl_response;
         } else {
             return $curl_response;
+        }
+    }
+
+    public function processTransactionResult(array $requestResponse){
+        $resultCode = $requestResponse['Body']['stkCallback']['ResultCode'];
+        switch ($resultCode){
+            case 0:
+                $CallbackMetadata = $requestResponse['Body']['stkCallback']['CallbackMetadata']['Item'];
+                $transaction = [];
+                foreach ($CallbackMetadata as $payment){
+                    $transaction[] = [
+                        $payment['Name'] => isset($payment['Value']) ? $payment['Value']:''
+                    ];
+                }
+                return [
+                    'status' => 'success',
+                    'message' => $requestResponse['Body']['stkCallback']['ResultDesc'],
+                    'data' => [
+                        'Amount' => $transaction[0]['Amount'],
+                        'MpesaReceiptNumber' => $transaction[1]['MpesaReceiptNumber'],
+                        'Balance' => $transaction[2]['Balance'],
+                        'TransactionDate' => $transaction[3]['TransactionDate'],
+                        'PhoneNumber' => $transaction[4]['PhoneNumber'],
+                        'MerchantRequestID' => $requestResponse['Body']['stkCallback']['MerchantRequestID'],
+                        'CheckoutRequestID' => $requestResponse['Body']['stkCallback']['CheckoutRequestID'],
+                        'ResultCode' => $requestResponse['Body']['stkCallback']['ResultCode'],
+                        'ResultDesc' => $requestResponse['Body']['stkCallback']['ResultDesc'],
+                    ]
+                ];
+
+                break;
+            case 1032:
+                $stkCallback = $requestResponse['Body']['stkCallback'];
+                return [
+                    'status' => 'fail',
+                    'message' => $stkCallback['ResultDesc'],
+                    'data' => [
+                        'MerchantRequestID' => $stkCallback['MerchantRequestID'],
+                        'CheckoutRequestID' => $stkCallback['CheckoutRequestID'],
+                        'ResultCode' => $stkCallback['ResultCode'],
+                        'ResultDesc' => $stkCallback['ResultDesc'],
+                    ]
+                ];
+                break;
+            default:
+                $stkCallback = $requestResponse['Body']['stkCallback'];
+                return [
+                    'status' => 'fail',
+                    'message' => $stkCallback['ResultDesc'],
+                    'data' => [
+                        'MerchantRequestID' => $stkCallback['MerchantRequestID'],
+                        'CheckoutRequestID' => $stkCallback['CheckoutRequestID'],
+                        'ResultCode' => $stkCallback['ResultCode'],
+                        'ResultDesc' => $stkCallback['ResultDesc'],
+                    ]
+                ];
+                break;
+        }
+
+    }
+
+    public function responseErrorDetails(array $requestResponseDetail){
+        $errorCode = $requestResponseDetail['errorCode'];
+        switch ($errorCode){
+            case "404.001.04":
+                return [
+                    'errorCode' => $errorCode,
+                    'errorRequestId' => $requestResponseDetail['requestId'],
+                    'errorDescription' => "Invalid Authentication Header",
+                    'errorMessage' => $requestResponseDetail['errorMessage']
+                ];
+
+                break;
+            case "400.002.02":
+                return [
+                    'errorCode' => $errorCode,
+                    'errorRequestId' => $requestResponseDetail['requestId'],
+                    'errorDescription' => "Bad Request",
+                    'errorMessage' => $requestResponseDetail['errorMessage']
+                ];
+
+                break;
+            case "400.002.05":
+                return [
+                    'errorCode' => $errorCode,
+                    'errorRequestId' => $requestResponseDetail['requestId'],
+                    'errorDescription' => "Invalid Request Payload",
+                    'errorMessage' => $requestResponseDetail['errorMessage']
+                ];
+
+                break;
+            case "500.001.1001":
+                return [
+                    'errorCode' => $errorCode,
+                    'errorRequestId' => $requestResponseDetail['requestId'],
+                    'errorDescription' => "Server Error",
+                    'errorMessage' => $requestResponseDetail['errorMessage']
+                ];
+
+                break;
+            case "404.001.01":
+                return [
+                    'errorCode' => $errorCode,
+                    'errorRequestId' => $requestResponseDetail['requestId'],
+                    'errorDescription' => "Resource not found",
+                    'errorMessage' => $requestResponseDetail['errorMessage']
+                ];
+
+                break;
+            case "404.001.03":
+                return [
+                    'errorCode' => $errorCode,
+                    'errorRequestId' => $requestResponseDetail['requestId'],
+                    'errorDescription' => "Invalid Access Token",
+                    'errorMessage' => $requestResponseDetail['errorMessage']
+                ];
+                break;
         }
     }
 
