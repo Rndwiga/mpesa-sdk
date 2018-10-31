@@ -34,7 +34,7 @@ class BaseRequest extends MpesaApiConnection
     protected $ApplicationStatus;
 
 
-    public function setApplicationStatus(bool $applicationIsLive = false){
+    public function setApplicationStatus(bool $applicationIsLive){
         $this->ApplicationStatus = $applicationIsLive;
         return $this;
     }
@@ -53,6 +53,7 @@ class BaseRequest extends MpesaApiConnection
     public function setSenderIdentifierType($SenderIdentifierType)
     {
         $this->SenderIdentifierType = $SenderIdentifierType;
+        return $this;
     }
 
     /**For B2B calls the options are [BusinessPaybill]
@@ -61,6 +62,7 @@ class BaseRequest extends MpesaApiConnection
     public function setAccountReference($AccountReference)
     {
         $this->AccountReference = $AccountReference;
+        return $this;
     }
 
     /**For Reversal Request the options are [Shortcode]
@@ -69,6 +71,7 @@ class BaseRequest extends MpesaApiConnection
     public function setReceiverParty($ReceiverParty)
     {
         $this->ReceiverParty = $ReceiverParty;
+        return $this;
     }
 
     /**For Reversal Request the options are [11 - Organization Identifier on M-Pesa]
@@ -82,6 +85,7 @@ class BaseRequest extends MpesaApiConnection
     public function setReceiverIdentifierType(int $ReceiverIdentifierType = 11)
     {
         $this->ReceiverIdentifierType = $ReceiverIdentifierType;
+        return $this;
     }
 
     /** For Reversal Request
@@ -91,6 +95,7 @@ class BaseRequest extends MpesaApiConnection
     public function setTransactionID($TransactionID)
     {
         $this->TransactionID = $TransactionID;
+        return $this;
     }
 
     /**For Account balance & Transaction Status, the options are [1-MSISDN,2-Till Number,4-Organization short code]
@@ -99,6 +104,7 @@ class BaseRequest extends MpesaApiConnection
     public function setIdentifierType(int $IdentifierType)
     {
         $this->IdentifierType = $IdentifierType;
+        return $this;
     }
 
     public function setSecurityCredential(string $initiatorPassword){

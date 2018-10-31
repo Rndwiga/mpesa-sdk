@@ -5,20 +5,6 @@
  * Date: 5/8/18
  * Time: 3:07 PM
  */
-/**
- * Use this function to make a transaction status request
- * @param $Initiator | The name of Initiator to initiating the request.
- * @param $SecurityCredential | 	Base64 encoded string of the M-Pesa short code and password, which is encrypted using M-Pesa public key and validates the transaction on M-Pesa Core system.
- * @param $CommandID | Unique command for each transaction type, possible values are: TransactionStatusQuery.
- * @param $TransactionID | Organization Receiving the funds.
- * @param $PartyA | Organization/MSISDN sending the transaction
- * @param $IdentifierType | Type of organization receiving the transaction
- * @param $ResultURL | The path that stores information of transaction
- * @param $QueueTimeOutURL | The path that stores information of time out transaction
- * @param $Remarks | 	Comments that are sent along with the transaction
- * @param $Occasion | 	Optional Parameter
- * @return mixed|string
- */
 
 namespace Rndwiga\Mpesa\Libraries\Account;
 
@@ -27,6 +13,25 @@ use Rndwiga\Mpesa\Libraries\BaseRequest;
 
 class MpesaTransactionStatus extends BaseRequest
 {
+    private function sampleRequest(){
+        $response = (new \Rndwiga\Mpesa\Libraries\Account\MpesaTransactionStatus())
+            ->setApplicationStatus(false)
+            ->setInitiatorName("apitest314")
+            ->setSecurityCredential("314reset")
+            ->setConsumerKey("mhRpe708DblJNb9P3qM6M93fWmnhXhLd")
+            ->setConsumerSecret("KeoYJkSLxqKM1vMP")
+            ->setCommandId("TransactionStatusQuery")
+            ->setPartyA(601314)
+            ->setIdentifierType(4)
+            ->setRemarks("Understanding Account Balance")
+            ->setTransactionID("MJV51H78BL")
+            ->setQueueTimeOutUrl("https://webhook.site/352510be-7b2e-45cd-b360-51bf1257c8bd")
+            ->setResultUrl("https://webhook.site/352510be-7b2e-45cd-b360-51bf1257c8bd")
+            ->makeTransactionStatusCall();
+
+        return $response;
+    }
+
     public function makeTransactionStatusCall(){
 
         if( $this->ApplicationStatus == true){

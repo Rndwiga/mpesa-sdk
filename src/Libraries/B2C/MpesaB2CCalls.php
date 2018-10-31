@@ -17,6 +17,27 @@ use Rndwiga\Mpesa\Libraries\MpesaApiConnection;
 class MpesaB2CCalls extends BaseRequest
 {
 
+
+    private function callSampleRequest(){
+        $response = (new \Rndwiga\Mpesa\Libraries\B2C\MpesaB2CCalls())
+            ->setApplicationStatus(false)
+            ->setInitiatorName("apitest314")
+            ->setSecurityCredential("314reset")
+            ->setConsumerKey("mhRpe708DblJNb9P3qM6M93fWmnhXhLd")
+            ->setConsumerSecret("KeoYJkSLxqKM1vMP")
+            ->setCommandId("BusinessPayment")
+            ->setAmount(10)
+            ->setPartyA(601314)
+            ->setPartyB(254708374149)
+            ->setRemarks("loan disbursement")
+            ->setOccasion("funds management")
+            ->setQueueTimeOutUrl("https://webhook.site/352510be-7b2e-45cd-b360-51bf1257c8bd")
+            ->setResultUrl("https://webhook.site/352510be-7b2e-45cd-b360-51bf1257c8bd")
+            ->makeB2cCall();
+        return $response;
+    }
+
+
     public function sendFunds($Amount,$PartyB){
         $response = $this->b2c($Amount,$PartyB);
         $processedRequest = $this->processRequestResponse($response);
@@ -38,12 +59,10 @@ class MpesaB2CCalls extends BaseRequest
     }
 
     /**
-     * @param $Amount | The amount being transacted
-     * @param $PartyB | Phone number receiving the transaction
      * @return string
      */
 
-    public function makeB2cCall($Amount, $PartyB){
+    public function makeB2cCall(){
         if(!isset($this->ApplicationStatus)){
             die("please declare the application status as defined in the documentation");
         }
@@ -65,9 +84,9 @@ class MpesaB2CCalls extends BaseRequest
             'InitiatorName' => $this->InitiatorName,
             'SecurityCredential' => $this->SecurityCredential,
             'CommandID' => $this->CommandID ,
-            'Amount' => $Amount,
+            'Amount' => $this->Amount,
             'PartyA' => $this->PartyA,
-            'PartyB' => "$PartyB",
+            'PartyB' => "$this->PartyB",
             'Remarks' => $this->Remarks,
             'QueueTimeOutURL' => $this->QueueTimeOutURL,
             'ResultURL' => $this->ResultURL,

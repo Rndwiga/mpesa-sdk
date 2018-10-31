@@ -14,6 +14,23 @@ use Rndwiga\Mpesa\Libraries\MpesaApiConnection;
 
 class MpesaAccountBalance extends BaseRequest
 {
+    private function sampleRequest(){
+        $response = (new MpesaAccountBalance())
+            ->setApplicationStatus(false)
+            ->setInitiatorName("apitest314")
+            ->setSecurityCredential("314reset")
+            ->setConsumerKey("mhRpe708DblJNb9P3qM6M93fWmnhXhLd")
+            ->setConsumerSecret("KeoYJkSLxqKM1vMP")
+            ->setCommandId("AccountBalance")
+            ->setPartyA(601314)
+            ->setIdentifierType(4)
+            ->setRemarks("Understanding Account Balance")
+            ->setQueueTimeOutUrl("https://webhook.site/352510be-7b2e-45cd-b360-51bf1257c8bd")
+            ->setResultUrl("https://webhook.site/352510be-7b2e-45cd-b360-51bf1257c8bd")
+            ->makeAccountBalanceCall();
+        return $response;
+    }
+
     public function makeAccountBalanceCall(){
 
         if(!isset($this->ApplicationStatus)){
@@ -38,8 +55,8 @@ class MpesaAccountBalance extends BaseRequest
             'CommandID' => $this->CommandID,
             'Initiator' => $this->InitiatorName,
             'SecurityCredential' => $this->SecurityCredential,
-            'PartyA' => $this->PartyA,
-            'IdentifierType' => $this->IdentifierType, //4
+            'PartyA' => "$this->PartyA",
+            'IdentifierType' => "$this->IdentifierType", //4
             'Remarks' => $this->Remarks,
             'QueueTimeOutURL' => $this->QueueTimeOutURL,
             'ResultURL' => $this->ResultURL

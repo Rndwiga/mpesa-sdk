@@ -16,6 +16,26 @@ use Rndwiga\Mpesa\Libraries\MpesaApiConnection;
 
 class MpesaReversalCall extends BaseRequest
 {
+    private function sameRequestCall(){
+        $response = (new \Rndwiga\Mpesa\Libraries\Account\Reversal\MpesaReversalCall())
+            ->setApplicationStatus(false)
+            ->setInitiatorName("apitest314")
+            ->setSecurityCredential("314reset")
+            ->setConsumerKey("mhRpe708DblJNb9P3qM6M93fWmnhXhLd")
+            ->setConsumerSecret("KeoYJkSLxqKM1vMP")
+            ->setCommandId("TransactionReversal")
+            ->setReceiverParty(601314)
+            ->setReceiverIdentifierType(11)
+            ->setTransactionID("MJV61H78BM")
+            ->setAmount(10)
+            ->setRemarks("Reversing Business Payment To Client")
+            ->setOccasion("Erroneous transaction reversal")
+            ->setQueueTimeOutUrl("https://webhook.site/352510be-7b2e-45cd-b360-51bf1257c8bd")
+            ->setResultUrl("https://webhook.site/352510be-7b2e-45cd-b360-51bf1257c8bd")
+            ->makeReversalRequestCall("MJV61H78BM");
+        return $response;
+    }
+
     public function makeReversalRequestCall(string $transactionId){
 
         if(!isset($this->ApplicationStatus)){
@@ -41,9 +61,9 @@ class MpesaReversalCall extends BaseRequest
             'SecurityCredential' => $this->SecurityCredential,
             'CommandID' => $this->CommandID,
             'TransactionID' => $this->TransactionID,
-            'Amount' => $this->Amount,
-            'ReceiverParty' => $this->ReceiverParty,
-            'RecieverIdentifierType' => $this->ReceiverIdentifierType,
+            'Amount' => "$this->Amount",
+            'ReceiverParty' => "$this->ReceiverParty",
+            'RecieverIdentifierType' => "$this->ReceiverIdentifierType",
             'ResultURL' => $this->ResultURL,
             'QueueTimeOutURL' => $this->QueueTimeOutURL,
             'Remarks' => $this->Remarks,
