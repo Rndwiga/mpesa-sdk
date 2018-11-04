@@ -11,6 +11,7 @@ namespace Rndwiga\Mpesa\Libraries\B2C;
 use Exception;
 
 use Rndwiga\Mmt\Helpers\MmtUtility;
+use Rndwiga\Mpesa\Helpers\MpesaUtility;
 use Rndwiga\Mpesa\Libraries\BaseRequest;
 use Rndwiga\Mpesa\Libraries\MpesaApiConnection;
 
@@ -38,21 +39,20 @@ class MpesaB2CCalls extends BaseRequest
     }
 
 
-    public function sendFunds($Amount,$PartyB){
-        $response = $this->b2c($Amount,$PartyB);
+    public function processCallRequest($response){
         $processedRequest = $this->processRequestResponse($response);
 
         if ($processedRequest === true){
-            MmtUtility::logInfo([$response],'b2c_success_request','mpesaSDKApp_B2C');
+            MpesaUtility::logInfo([$response],'b2c_success_request','mpesaSDKApp_B2C');
             return $response;
         }else{
             $mpesaRequestdata = json_decode($response);
 
-            MmtUtility::logInfo([$mpesaRequestdata],'b2c_failed_request_1','mpesaSDKApp_B2C');
+            MpesaUtility::logInfo([$mpesaRequestdata],'b2c_failed_request_1','mpesaSDKApp_B2C');
 
             $mpesaRequestdata->originalRequest = $processedRequest;
 
-            MmtUtility::logInfo([$mpesaRequestdata],'b2c_failed_request_2','mpesaSDKApp_B2C');
+            MpesaUtility::logInfo([$mpesaRequestdata],'b2c_failed_request_2','mpesaSDKApp_B2C');
 
             return json_encode($mpesaRequestdata);
         }
