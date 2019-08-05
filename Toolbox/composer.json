@@ -1,0 +1,29 @@
+{
+    "name": "rndwiga/toolbox",
+    "type": "package",
+    "description": "A package contains helper methods and classes that can be used in any project",
+    "keywords": ["ui", "rndwiga",  "admin","laravel"],
+    "authors": [
+        {
+            "name": "Raphael Ndwiga",
+            "email": "raphndwi@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.1",
+        "monolog/monolog": "^1.24",
+        "vlucas/phpdotenv": "^3.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "Rndwiga\\Toolbox\\": "src/"
+        },
+        "files": [
+            "src/Helpers/toolbox.php"
+        ]
+    },
+    "license": "MIT",
+    "minimum-stability": "stable"
+
+}
+
