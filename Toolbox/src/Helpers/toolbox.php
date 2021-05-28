@@ -11,54 +11,13 @@
 
 use Illuminate\Support\Facades\Session;
 
-if (! function_exists('getActiveTheme'))
-    {
-        function getActiveTheme($authTheme = null,$frontendTheme = null){
-            if (!is_null($authTheme)){
-                return env('BASE_THEME_AUTH');
-            }elseif (!is_null($frontendTheme)){
-                return env('BASE_THEME_FRONTEND');
-            }else{
-                return env('BASE_THEME');
-            }
-        }
-    }
-
-    if (! function_exists('displayAlert')){
-        /*
-         * Usage::
-         * Redirect::back()->with('message', 'error|There was an error...');
-            Redirect::back()->with('message', 'message|Record updated.');
-            Redirect::to('/')->with('message', 'success|Record updated.');
-         */
-        function displayAlert(){
-            if (Session::has('message'))
-            {
-                list($type, $message) = explode('|', Session::get('message'));
-
-                $type = $type == 'error' ?: 'danger';
-                $type = $type == 'success' ?: 'success';
-                $type = $type == 'message' ?: 'info';
-
-                // return sprintf('<div class="alert alert-%s">%s</div>', $type, $message);
-                return sprintf('<div class="alert alert-%s alert-dismissible fade in" role="alert">
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">×</span>
-                </button>
-                <strong>%s 😃	</strong>
-              </div>', $type, $message);
-            }
-
-            return '';
-        }
-
-    }
-
     if (! function_exists('storagePath')){
-         function storagePath(string $path){
+         function storagePath(string $path = null){
             if (function_exists('storage_path')){
                 return storage_path($path);
             }
-            return __DIR__ .'/'. $path;
+            return __DIR__ . $path;
+            //return  dirname(__DIR__,3);
         }
     }
 

@@ -1,8 +1,0 @@
-[2019-08-05 12:51:04] app.logger.DEBUG: {"requestId":"20952-25007552-1","errorCode":"401.002.01","errorMessage":"Error Occurred - Invalid Access Token - Invalid access token"}  
-[2019-08-05 12:51:05] app.logger.DEBUG: {"requestId":"25636-25404525-1","errorCode":"401.002.01","errorMessage":"Error Occurred - Invalid Access Token - Invalid access token"}  
-[2019-08-05 12:51:37] app.logger.DEBUG: {"requestId":"29791-25199382-1","errorCode":"401.002.01","errorMessage":"Error Occurred - Invalid Access Token - Invalid access token"}  
-[2019-08-05 12:51:37] app.logger.DEBUG: {"requestId":"20952-25008127-1","errorCode":"401.002.01","errorMessage":"Error Occurred - Invalid Access Token - Invalid access token"}  
-[2019-08-05 12:51:54] app.logger.DEBUG: {"fault":{"faultstring":"Unable to identify proxy for host: secure and url: \/mpesa\/b2c-validate-id\/v1.0.1\/paymentrequest","detail":{"errorcode":"messaging.adaptors.http.flow.ApplicationNotFound"}}}  
-[2019-08-05 12:51:55] app.logger.DEBUG: {"fault":{"faultstring":"Unable to identify proxy for host: secure and url: \/mpesa\/b2c-validate-id\/v1.0.1\/paymentrequest","detail":{"errorcode":"messaging.adaptors.http.flow.ApplicationNotFound"}}}  
-[2019-08-05 12:58:24] app.logger.DEBUG: {"fault":{"faultstring":"Unable to identify proxy for host: secure and url: \/mpesa\/b2c-validate-id\/v1.0.1\/paymentrequest","detail":{"errorcode":"messaging.adaptors.http.flow.ApplicationNotFound"}}}  
-[2019-08-05 12:58:24] app.logger.DEBUG: {"fault":{"faultstring":"Unable to identify proxy for host: secure and url: \/mpesa\/b2c-validate-id\/v1.0.1\/paymentrequest","detail":{"errorcode":"messaging.adaptors.http.flow.ApplicationNotFound"}}}  

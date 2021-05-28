@@ -85,7 +85,7 @@ class AppStorage
 
     public function createStorage()
     {
-        $folder = date('Y').'/'.date('M').'/'."{$this->getRootFolder()}/".date('Y-m-d').'/'.$this->getLogFolder(); // setting the folder name
+        $folder = '/storage/'. date('Y').'/'.date('M').'/'."{$this->getRootFolder()}/".date('Y-m-d').'/'.$this->getLogFolder(); // setting the folder name
 
         if (!is_dir(storagePath($folder)))
         {

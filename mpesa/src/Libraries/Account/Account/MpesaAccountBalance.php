@@ -14,19 +14,19 @@ use Rndwiga\Mpesa\Libraries\MpesaApiConnection;
 
 class MpesaAccountBalance extends BaseRequest
 {
-    private function sampleRequest(){
+    public function sampleRequest(){
         $response = (new MpesaAccountBalance())
             ->setApplicationStatus(false)
-            ->setInitiatorName("apitest314")
-            ->setSecurityCredential("314reset")
-            ->setConsumerKey("mhRpe708DblJNb9P3qM6M93fWmnhXhLd")
-            ->setConsumerSecret("KeoYJkSLxqKM1vMP")
+            ->setInitiatorName(env('INITIATOR_NAME'))
+            ->setSecurityCredential(env('SECURITY_CREDENTIAL'))
+            ->setConsumerKey(env('CONSUMER_KEY'))
+            ->setConsumerSecret(env('CONSUMER_SECRET'))
             ->setCommandId("AccountBalance")
-            ->setPartyA(601314)
+            ->setPartyA(env('PARTY_A'))
             ->setIdentifierType(4)
             ->setRemarks("Understanding Account Balance")
-            ->setQueueTimeOutUrl("https://webhook.site/352510be-7b2e-45cd-b360-51bf1257c8bd")
-            ->setResultUrl("https://webhook.site/352510be-7b2e-45cd-b360-51bf1257c8bd")
+            ->setQueueTimeOutUrl(env('QUEUE_TIMEOUT_URL'))
+            ->setResultUrl(env('RESULT_URL'))
             ->makeAccountBalanceCall();
         return $response;
     }
@@ -63,6 +63,12 @@ class MpesaAccountBalance extends BaseRequest
         );
 
         $data_string = json_encode($curl_post_data);
+
+        if(env('APPLICATION_STATUS') == false)
+        {
+            curl_setopt($curl, CURLOPT_FOLLOWLOCATION, TRUE);
+            curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+        }
 
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($curl, CURLOPT_POST, true);

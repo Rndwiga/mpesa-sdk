@@ -16,7 +16,10 @@
         "monolog/monolog": "^1.24",
         "vlucas/phpdotenv": "^3.4",
         "phpseclib/phpseclib": "^2.0",
-        "ramsey/uuid": "^3.8"
+        "ramsey/uuid": "^3.8",
+        "ext-json": "*",
+        "ext-curl": "*",
+        "ext-openssl": "*"
     },
     "license": "MIT",
     "minimum-stability": "dev",
@@ -35,5 +38,8 @@
                 "symlink": true
             }
         }
-    ]
+    ],
+    "require-dev": {
+
+    }
 }
