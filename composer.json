@@ -1,8 +1,8 @@
 {
     "name": "rndwiga/mpesa-sdk",
-    "type": "package",
+    "type": "library",
     "description": "An expressive mpesa implementation",
-    "keywords": ["ai", "rndwiga","mpesa"],
+    "keywords": ["ai", "rndwiga","mpesa", "laravel", "php"],
     "authors": [
         {
             "name": "Raphael Ndwiga",
@@ -47,5 +47,15 @@
     },
     "scripts": {
         "test": "pest"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Rndwiga\\Mpesa\\MpesaServiceProvider"
+            ],
+            "aliases": {
+                "Mpesa": "Rndwiga\\Mpesa\\Facades\\Mpesa"
+            }
+        }
     }
 }

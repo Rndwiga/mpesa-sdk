@@ -7,11 +7,14 @@ An opinionated fluent Safaricom M-Pesa SDK that provides a simple and elegant wa
 
 - [Tech Stack](#tech-stack)
 - [Installation](#installation)
+  - [Laravel Integration](#laravel-integration)
 - [Requirements](#requirements)
 - [Configuration](#configuration)
+  - [Laravel Configuration](#laravel-configuration)
 - [Features](#features)
 - [Usage](#usage)
   - [Initialization](#initialization)
+  - [Laravel Usage](#laravel-usage)
   - [B2C (Business to Customer)](#b2c-business-to-customer)
   - [B2B (Business to Business)](#b2b-business-to-business)
   - [C2B (Customer to Business)](#c2b-customer-to-business)
@@ -53,6 +56,30 @@ cd mpesa-sdk
 composer update
 ```
 
+### Laravel Integration
+
+This package supports Laravel integration out of the box. After installing the package, the service provider will be automatically registered thanks to Laravel's package auto-discovery feature.
+
+If you're using Laravel < 5.5 or have disabled auto-discovery, add the service provider and facade to your `config/app.php` file:
+
+```php
+'providers' => [
+    // ...
+    Rndwiga\Mpesa\MpesaServiceProvider::class,
+],
+
+'aliases' => [
+    // ...
+    'Mpesa' => Rndwiga\Mpesa\Facades\Mpesa::class,
+],
+```
+
+Then publish the configuration file:
+
+```bash
+php artisan vendor:publish --tag=mpesa-config
+```
+
 ## Requirements
 
 - PHP 8.1 or higher
@@ -66,22 +93,51 @@ The SDK requires several environment variables to be set for proper operation:
 
 ```
 # M-Pesa API Credentials
-CONSUMER_KEY=your_consumer_key
-CONSUMER_SECRET=your_consumer_secret
-INITIATOR_NAME=your_initiator_name
-INITIATOR_PASSWORD=your_initiator_password
+MPESA_CONSUMER_KEY=your_consumer_key
+MPESA_CONSUMER_SECRET=your_consumer_secret
+MPESA_INITIATOR_NAME=your_initiator_name
+MPESA_INITIATOR_PASSWORD=your_initiator_password
 
 # Business Shortcode
-SHORTCODE=your_shortcode
-BUSINESS_SHORTCODE=your_business_shortcode
+MPESA_SHORTCODE=your_shortcode
+MPESA_BUSINESS_SHORTCODE=your_business_shortcode
 
 # Express (STK Push) Settings
-PASSKEY=your_passkey
+MPESA_PASSKEY=your_passkey
+
+# Environment
+MPESA_PRODUCTION=false
 
 # Callback URLs
-CALLBACK_URL=https://your-domain.com/api/callback
-TIMEOUT_URL=https://your-domain.com/api/timeout
-RESULT_URL=https://your-domain.com/api/result
+MPESA_CALLBACK_URL=https://your-domain.com/api/callback
+MPESA_TIMEOUT_URL=https://your-domain.com/api/timeout
+MPESA_RESULT_URL=https://your-domain.com/api/result
+```
+
+### Laravel Configuration
+
+When using the package with Laravel, you can publish the configuration file to customize the settings:
+
+```bash
+php artisan vendor:publish --tag=mpesa-config
+```
+
+This will create a `config/mpesa.php` file in your Laravel application where you can configure all the M-Pesa settings. The configuration values will be automatically loaded from your `.env` file using the prefixed environment variables (e.g., `MPESA_CONSUMER_KEY`).
+
+Example Laravel `.env` configuration:
+
+```
+MPESA_CONSUMER_KEY=your_consumer_key
+MPESA_CONSUMER_SECRET=your_consumer_secret
+MPESA_PRODUCTION=false
+MPESA_INITIATOR_NAME=your_initiator_name
+MPESA_INITIATOR_PASSWORD=your_initiator_password
+MPESA_SHORTCODE=your_shortcode
+MPESA_BUSINESS_SHORTCODE=your_business_shortcode
+MPESA_PASSKEY=your_passkey
+MPESA_CALLBACK_URL=https://your-domain.com/api/callback
+MPESA_TIMEOUT_URL=https://your-domain.com/api/timeout
+MPESA_RESULT_URL=https://your-domain.com/api/result
 ```
 
 ## Features
@@ -133,6 +189,72 @@ $mpesa = new MpesaAPI(
     $logger, // optional
     $cache  // optional
 );
+```
+
+### Laravel Usage
+
+When using the package with Laravel, you can access the Mpesa API through the facade:
+
+```php
+use Rndwiga\Mpesa\Facades\Mpesa;
+
+// The Mpesa facade automatically uses the configuration from config/mpesa.php
+// No need to manually initialize the API
+
+// Example: Send money using B2C
+$response = Mpesa::b2c()
+    ->setInitiatorName(config('mpesa.initiator_name'))
+    ->setSecurityCredential(config('mpesa.initiator_password'))
+    ->setCommandId('BusinessPayment')
+    ->setAmount(100)
+    ->setPartyA(config('mpesa.shortcode'))
+    ->setPartyB('254712345678')
+    ->setRemarks('Payment for services')
+    ->setQueueTimeoutUrl(config('mpesa.timeout_url'))
+    ->setResultUrl(config('mpesa.result_url'))
+    ->setOccasion('Service payment')
+    ->makePayment();
+
+// Example: STK Push
+$response = Mpesa::express()
+    ->setBusinessShortCode(config('mpesa.business_shortcode'))
+    ->setPasskey(config('mpesa.passkey'))
+    ->setTransactionType('CustomerPayBillOnline')
+    ->setAmount(100)
+    ->setPartyA('254712345678')
+    ->setPartyB(config('mpesa.business_shortcode'))
+    ->setPhoneNumber('254712345678')
+    ->setCallbackUrl(config('mpesa.callback_url'))
+    ->setAccountReference('Payment for order #123')
+    ->setTransactionDesc('Payment for product/service')
+    ->push();
+```
+
+You can also use dependency injection in your controllers:
+
+```php
+use Rndwiga\Mpesa\MpesaAPI;
+
+class PaymentController extends Controller
+{
+    protected $mpesa;
+
+    public function __construct(MpesaAPI $mpesa)
+    {
+        $this->mpesa = $mpesa;
+    }
+
+    public function processPayment()
+    {
+        $response = $this->mpesa->express()
+            ->setBusinessShortCode(config('mpesa.business_shortcode'))
+            // ... other settings
+            ->push();
+
+        // Process the response
+        return response()->json($response);
+    }
+}
 ```
 
 ### B2C (Business to Customer)
@@ -519,15 +641,17 @@ if ($validation['status'] === 'success') {
 The SDK includes helper functions for common tasks:
 
 ```php
-use function Rndwiga\Mpesa\Utils\env;
-use function Rndwiga\Mpesa\Utils\str_slug;
+use function Rndwiga\Mpesa\Utils\mpesa_env;
+use function Rndwiga\Mpesa\Utils\mpesa_str_slug;
 
 // Get an environment variable
-$apiKey = env('MPESA_API_KEY');
+$apiKey = mpesa_env('MPESA_API_KEY');
 
 // Convert a string to a URL-friendly slug
-$slug = str_slug('Hello World'); // Returns 'hello-world'
+$slug = mpesa_str_slug('Hello World'); // Returns 'hello-world'
 ```
+
+When using the package with Laravel, these helper functions are designed to work seamlessly with Laravel's built-in functions. The `mpesa_env()` function will use Laravel's `env()` function if available, and `mpesa_str_slug()` will use Laravel's `Str::slug()` if available.
 
 ## Error Handling
 
