@@ -1,92 +1,175 @@
 <?php
 /**
- * Created by PhpStorm.
- * User: rndwiga
- * Date: 4/2/18
- * Time: 6:47 PM
+ * MpesaReversalCall
+ *
+ * Handles transaction reversal requests to the Mpesa API.
+ *
+ * @package Rndwiga\Mpesa\Libraries\Account\Reversal
+ * @author Raphael Ndwiga <raphael@raphaelndwiga.africa>
  */
 
 namespace Rndwiga\Mpesa\Libraries\Account\Reversal;
 
-use Exception;
-
-use Rndwiga\Mmt\Helpers\MmtUtility;
+use InvalidArgumentException;
+use RuntimeException;
 use Rndwiga\Mpesa\Libraries\BaseRequest;
 use Rndwiga\Mpesa\Libraries\MpesaApiConnection;
 
 class MpesaReversalCall extends BaseRequest
 {
-    private function sameRequestCall(){
-        $response = (new \Rndwiga\Mpesa\Libraries\Account\Reversal\MpesaReversalCall())
-            ->setApplicationStatus(false)
-            ->setInitiatorName("apitest314")
-            ->setSecurityCredential("314reset")
-            ->setConsumerKey("mhRpe708DblJNb9P3qM6M93fWmnhXhLd")
-            ->setConsumerSecret("KeoYJkSLxqKM1vMP")
+    /**
+     * Provides a sample request for reversing a transaction
+     *
+     * This method demonstrates how to use the MpesaReversalCall class
+     * to reverse a transaction using the Mpesa API.
+     * 
+     * Note: This is just an example. Replace the placeholder values with your actual credentials.
+     *
+     * @return string JSON response from the API
+     */
+    public function sampleRequest(): string
+    {
+        $response = (new MpesaReversalCall())
+            ->setApplicationStatus(false) // false for sandbox, true for production
+            ->setInitiatorName(env('INITIATOR_NAME'))
+            ->setSecurityCredential(env('SECURITY_CREDENTIAL'))
+            ->setConsumerKey(env('CONSUMER_KEY'))
+            ->setConsumerSecret(env('CONSUMER_SECRET'))
             ->setCommandId("TransactionReversal")
-            ->setReceiverParty(601314)
-            ->setReceiverIdentifierType(11)
-            ->setTransactionID("MJV61H78BM")
-            ->setAmount(10)
-            ->setRemarks("Reversing Business Payment To Client")
-            ->setOccasion("Erroneous transaction reversal")
-            ->setQueueTimeOutUrl("https://webhook.site/352510be-7b2e-45cd-b360-51bf1257c8bd")
-            ->setResultUrl("https://webhook.site/352510be-7b2e-45cd-b360-51bf1257c8bd")
-            ->makeReversalRequestCall("MJV61H78BM");
+            ->setReceiverParty(env('PARTY_A')) // The party receiving the reversal
+            ->setReceiverIdentifierType(4) // 4 for organization shortcode
+            ->setTransactionID("LKXXXX1234") // The M-Pesa Transaction ID to reverse
+            ->setAmount(100) // Amount to reverse
+            ->setRemarks("Reversing erroneous payment")
+            ->setOccasion("Transaction reversal")
+            ->setQueueTimeOutUrl(env('QUEUE_TIMEOUT_URL'))
+            ->setResultUrl(env('RESULT_URL'))
+            ->makeReversalRequestCall();
+
         return $response;
     }
 
-    public function makeReversalRequestCall(string $transactionId){
-
-        if(!isset($this->ApplicationStatus)){
-            die("please declare the application status as defined in the documentation");
+    /**
+     * Make a transaction reversal request to the Mpesa API
+     *
+     * This method sends a request to the Mpesa API to reverse a transaction.
+     * 
+     * Example successful response:
+     * ```json
+     * {
+     *   "OriginatorConversationID": "29115-34620561-1",
+     *   "ConversationID": "AG_20180708_00004636b4e35055927d",
+     *   "ResponseCode": "0",
+     *   "ResponseDescription": "Accept the service request successfully."
+     * }
+     * ```
+     *
+     * Required properties that must be set before calling this method:
+     * - ApplicationStatus: true for production, false for sandbox
+     * - ConsumerKey: Your API consumer key
+     * - ConsumerSecret: Your API consumer secret
+     * - CommandID: Usually "TransactionReversal"
+     * - InitiatorName: The name of the initiator
+     * - SecurityCredential: The security credential
+     * - TransactionID: The M-Pesa Transaction ID to reverse
+     * - Amount: Amount to reverse
+     * - ReceiverParty: The party receiving the reversal
+     * - ReceiverIdentifierType: The type of identifier (usually 4 for organization shortcode)
+     * - Remarks: Comments about the reversal
+     * - Occasion: The occasion for the reversal
+     * - QueueTimeOutURL: The URL to receive timeout notifications
+     * - ResultURL: The URL to receive the result
+     *
+     * @param string|null $transactionId Optional transaction ID (if not provided, uses the one set with setTransactionID)
+     * @return string JSON response from the API
+     * @throws InvalidArgumentException If required properties are not set
+     * @throws RuntimeException If there's an error in the API request
+     */
+    public function makeReversalRequestCall(string $transactionId = null): string
+    {
+        // If transaction ID is provided, set it
+        if ($transactionId !== null) {
+            $this->setTransactionID($transactionId);
         }
 
-        if( $this->ApplicationStatus == true){
-            $url = 'https://api.safaricom.co.ke/mpesa/reversal/v1/request';
-        }elseif ($this->ApplicationStatus== false){
-            $url = 'https://sandbox.safaricom.co.ke/mpesa/reversal/v1/request';
-        }else{
-            return json_encode(["Message"=>"invalid application status"]);
+        // Validate required properties
+        $requiredProperties = [
+            'ApplicationStatus', 'ConsumerKey', 'ConsumerSecret', 'CommandID',
+            'InitiatorName', 'SecurityCredential', 'TransactionID', 'Amount',
+            'ReceiverParty', 'ReceiverIdentifierType', 'Remarks', 'Occasion',
+            'QueueTimeOutURL', 'ResultURL'
+        ];
+
+        foreach ($requiredProperties as $property) {
+            if (empty($this->$property)) {
+                throw new InvalidArgumentException("Required property '{$property}' is not set");
+            }
         }
-        $token = $this->generateAccessToken($this->ApplicationStatus,$this->ConsumerKey,$this->ConsumerSecret);
 
-        $curl = curl_init();
-        curl_setopt($curl, CURLOPT_URL, $url);
-        curl_setopt($curl, CURLOPT_HTTPHEADER, array('Content-Type:application/json','Authorization:Bearer '.$token));
+        // Determine if we're using live or sandbox environment
+        $isLive = $this->ApplicationStatus === true;
 
+        // Get the appropriate URL based on environment
+        $url = $isLive 
+            ? 'https://api.safaricom.co.ke/mpesa/reversal/v1/request'
+            : 'https://sandbox.safaricom.co.ke/mpesa/reversal/v1/request';
 
-        $curl_post_data = array(
-            'Initiator' => $this->InitiatorName,
-            'SecurityCredential' => $this->SecurityCredential,
-            'CommandID' => $this->CommandID,
-            'TransactionID' => $this->TransactionID,
-            'Amount' => "$this->Amount",
-            'ReceiverParty' => "$this->ReceiverParty",
-            'RecieverIdentifierType' => "$this->ReceiverIdentifierType",
-            'ResultURL' => $this->ResultURL,
-            'QueueTimeOutURL' => $this->QueueTimeOutURL,
-            'Remarks' => $this->Remarks,
-            'Occasion' => $this->Occasion
-        );
+        try {
+            // Generate access token
+            $token = $this->generateAccessToken($this->ApplicationStatus, $this->ConsumerKey, $this->ConsumerSecret);
 
-        $data_string = json_encode($curl_post_data);
+            // Prepare request data
+            $requestData = [
+                'Initiator' => $this->InitiatorName,
+                'SecurityCredential' => $this->SecurityCredential,
+                'CommandID' => $this->CommandID,
+                'TransactionID' => $this->TransactionID,
+                'Amount' => $this->Amount,
+                'ReceiverParty' => $this->ReceiverParty,
+                'RecieverIdentifierType' => $this->ReceiverIdentifierType,
+                'ResultURL' => $this->ResultURL,
+                'QueueTimeOutURL' => $this->QueueTimeOutURL,
+                'Remarks' => $this->Remarks,
+                'Occasion' => $this->Occasion
+            ];
 
-        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($curl, CURLOPT_POST, true);
-        curl_setopt($curl, CURLOPT_POSTFIELDS, $data_string);
+            // Initialize cURL session
+            $curl = curl_init();
+            curl_setopt($curl, CURLOPT_URL, $url);
+            curl_setopt($curl, CURLOPT_HTTPHEADER, [
+                'Content-Type: application/json',
+                'Authorization: Bearer ' . $token
+            ]);
 
-        $curl_response = curl_exec($curl);
-        $err = curl_error($curl);
+            // Set SSL verification based on environment
+            if (!$isLive) {
+                curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
+                curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+            }
 
-        curl_close($curl);
+            curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($curl, CURLOPT_POST, true);
+            curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($requestData));
 
-        if ($err) {
-            echo "cURL Error #:" . $err;
-            $curl_response = "cURL Error #:" . $err;
-            return $curl_response;
-        } else {
-            return $curl_response;
+            // Execute cURL request
+            $response = curl_exec($curl);
+            $error = curl_error($curl);
+
+            curl_close($curl);
+
+            // Handle cURL errors
+            if ($error) {
+                throw new RuntimeException("cURL Error: " . $error);
+            }
+
+            return $response;
+
+        } catch (\Exception $e) {
+            // Convert any exceptions to JSON error response
+            return json_encode([
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ]);
         }
     }
 }

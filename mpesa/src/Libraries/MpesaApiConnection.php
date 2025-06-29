@@ -1,92 +1,136 @@
 <?php
 /**
- * Created by PhpStorm.
- * User: rndwiga
- * Date: 4/2/18
- * Time: 6:40 PM
+ * MpesaApiConnection
+ *
+ * Base class for Mpesa API connections with methods for authentication and security.
+ *
+ * @package Rndwiga\Mpesa\Libraries
+ * @author Raphael Ndwiga <raphndwi@gmail.com>
  */
 
 namespace Rndwiga\Mpesa\Libraries;
 
-
 use phpseclib\Crypt\RSA;
+use RuntimeException;
+use InvalidArgumentException;
 
-class MpesaApiConnection
+class MpesaApiConnection extends MpesaBaseClass
 {
+    /**
+     * Base URL for Mpesa API in production environment
+     */
+    protected const MPESA_PRODUCTION_URL = 'https://api.safaricom.co.ke';
 
-    public function generateAccessToken($isLive = false,$consumerKey,$consumerSecret){
-        if ($isLive == true){
-            $url = 'https://api.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials';
-        }else{
-            $url = 'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials';
+    /**
+     * Base URL for Mpesa API in sandbox environment
+     */
+    protected const MPESA_SANDBOX_URL = 'https://sandbox.safaricom.co.ke';
+
+    /**
+     * Path to production certificate file
+     */
+    protected const PRODUCTION_CERT_PATH = __DIR__ . '/certificates/production_cert.cer';
+
+    /**
+     * Path to sandbox certificate file
+     */
+    protected const SANDBOX_CERT_PATH = __DIR__ . '/certificates/sandbox_cert.cer';
+
+    /**
+     * Generate an access token for Mpesa API authentication
+     *
+     * @param bool $isLive Whether to use production or sandbox environment
+     * @param string $consumerKey The consumer key
+     * @param string $consumerSecret The consumer secret
+     * @return string The access token
+     * @throws RuntimeException If the consumer key or secret is not provided
+     */
+    public function generateAccessToken(bool $isLive, string $consumerKey, string $consumerSecret): string
+    {
+        if (empty($consumerKey) || empty($consumerSecret)) {
+            throw new RuntimeException("Consumer key and consumer secret are required");
         }
 
-        $consumer_key= $consumerKey;
-        $consumer_secret= $consumerSecret;
-
-        if(!isset($consumer_key)||!isset($consumer_secret)){
-            die("please declare the consumer key and consumer secret as defined in the documentation");
-        }
+        $baseUrl = $isLive ? self::MPESA_PRODUCTION_URL : self::MPESA_SANDBOX_URL;
+        $url = $baseUrl . '/oauth/v1/generate?grant_type=client_credentials';
 
         $curl = curl_init();
         curl_setopt($curl, CURLOPT_URL, $url);
-        $credentials = base64_encode("$consumer_key:$consumer_secret");
-        curl_setopt($curl, CURLOPT_HTTPHEADER, array( 'Authorization: Basic ' . $credentials )); //setting a custom header
+        $credentials = base64_encode("$consumerKey:$consumerSecret");
+        curl_setopt($curl, CURLOPT_HTTPHEADER, ['Authorization: Basic ' . $credentials]);
         curl_setopt($curl, CURLOPT_HEADER, false);
-        curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, $isLive); // Only verify SSL in production
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
 
-        $curl_response = curl_exec($curl);
+        $response = curl_exec($curl);
 
-        return json_decode($curl_response)->access_token;
+        if ($response === false) {
+            $error = curl_error($curl);
+            curl_close($curl);
+            throw new RuntimeException("cURL Error: " . $error);
+        }
 
+        curl_close($curl);
+
+        $decoded = json_decode($response);
+
+        if (!isset($decoded->access_token)) {
+            throw new RuntimeException("Failed to get access token: " . $response);
+        }
+
+        return $decoded->access_token;
     }
-
-
-    public static function mpesaComputeSecurityCredentials(){
-        $service_provider_password = $consumer_key=config('gateway.module.payment_gateway.mpesa.security_credentials_password');
-        $public_key = openssl_pkey_get_public(file_get_contents(__DIR__.'/certificates/mpesa_public_key_cert.cer'));
-        $public_key_data = openssl_pkey_get_details($public_key);
-        $rsa = new RSA();
-        $rsa->loadKey($public_key_data['key']); //the public key
-        $rsa->setEncryptionMode(OPENSSL_PKCS1_PADDING);
-        $cipher_text = $rsa->encrypt($service_provider_password);
-        $mpesa_security_credentials = base64_encode($cipher_text);
-
-        return $mpesa_security_credentials;
-    }
-
-    public function cert($plainTextPassword)
-    {
-        $file = __DIR__.'certificates/sandbox_cert.cer';
-        $fp=fopen($file,"r");
-        $publicKey = fread($fp,filesize($file));
-        fclose($fp);
-        openssl_get_publickey($publicKey);
-        openssl_public_encrypt($plainTextPassword, $encrypted, $publicKey, OPENSSL_PKCS1_PADDING);
-        return  base64_encode($encrypted);
-    }
-
 
     /**
-     *Use this function to confirm all transactions in callback routes
+     * Generate security credentials for Mpesa API authentication
+     *
+     * @param string $initiatorPassword The initiator password to encrypt
+     * @param bool $isLive Whether to use production or sandbox environment
+     * @return string The encrypted security credential
+     * @throws RuntimeException If encryption fails
      */
-    public function finishTransaction(){
-        $resultArray=[
-            "ResultDesc"=>"Confirmation Service request accepted successfully",
-            "ResultCode"=>"0"
-        ];
-        header('Content-Type: application/json');
-
-        echo json_encode($resultArray);
-    }
-    public static function generateSecurityCredentials ($initiatorPassword, $isApplicationLive= true)
+    public function generateSecurityCredentials(string $initiatorPassword, bool $isLive = false): string
     {
+        if (empty($initiatorPassword)) {
+            throw new InvalidArgumentException("Initiator password is required");
+        }
 
-        if ($isApplicationLive === true){
+        try {
+            // Get the appropriate certificate based on environment
+            $certPath = $isLive ? self::PRODUCTION_CERT_PATH : self::SANDBOX_CERT_PATH;
 
-        // $publicKey = "PATH_TO_CERTICATE";
-        $publicKey ="-----BEGIN CERTIFICATE-----
+            // If certificate file exists, use it
+            if (file_exists($certPath)) {
+                $publicKey = file_get_contents($certPath);
+            } else {
+                // Otherwise use the hardcoded certificate (fallback)
+                $publicKey = $this->getCertificateContent($isLive);
+            }
+
+            // Encrypt the password
+            $encrypted = '';
+            $result = openssl_public_encrypt($initiatorPassword, $encrypted, $publicKey, OPENSSL_PKCS1_PADDING);
+
+            if (!$result) {
+                throw new RuntimeException("Failed to encrypt initiator password: " . openssl_error_string());
+            }
+
+            return base64_encode($encrypted);
+        } catch (\Exception $e) {
+            throw new RuntimeException("Security credential generation failed: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Get the certificate content based on environment
+     *
+     * @param bool $isLive Whether to use production or sandbox certificate
+     * @return string The certificate content
+     */
+    protected function getCertificateContent(bool $isLive): string
+    {
+        if ($isLive) {
+            return "-----BEGIN CERTIFICATE-----
 MIIGkzCCBXugAwIBAgIKXfBp5gAAAD+hNjANBgkqhkiG9w0BAQsFADBbMRMwEQYK
 CZImiZPyLGQBGRYDbmV0MRkwFwYKCZImiZPyLGQBGRYJc2FmYXJpY29tMSkwJwYD
 VQQDEyBTYWZhcmljb20gSW50ZXJuYWwgSXNzdWluZyBDQSAwMjAeFw0xNzA0MjUx
@@ -124,8 +168,8 @@ dqAmj8WYkYdWIHQlkKFP9ba0RJv7aBKb8/KP+qZ5hJip0I5Ey6JJ3wlEWRWUYUKh
 gYoPHrJ92ToadnFCCpOlLKWc0xVxANofy6fqreOVboPO0qTAYpoXakmgeRNLUiar
 0ah6M/q/KA==
 -----END CERTIFICATE-----";
-        }else{
-            $publicKey = "-----BEGIN CERTIFICATE-----
+        } else {
+            return "-----BEGIN CERTIFICATE-----
 MIIGgDCCBWigAwIBAgIKMvrulAAAAARG5DANBgkqhkiG9w0BAQsFADBbMRMwEQYK
 CZImiZPyLGQBGRYDbmV0MRkwFwYKCZImiZPyLGQBGRYJc2FmYXJpY29tMSkwJwYD
 VQQDEyBTYWZhcmljb20gSW50ZXJuYWwgSXNzdWluZyBDQSAwMjAeFw0xNDExMTIw
@@ -161,17 +205,69 @@ KMmJCY3sXxFHs5ilNXo8YavgRLpxJxdZMkiUIVuVaBanXkz9/nMriiJJwwcMPjUV
 w4THLy9rDmUIasC8GDdRcVM8xDOVQD/Pt5qlx/LSbTNe2fekhTLFIGYXJVz2rcsj
 k1BfG7P3pXnsPAzu199UZnqhEF+y/0/nNpf3ftHZjfX6Ws+dQuLoDN6pIl8qmok9
 9E/EAgL1zOIzFvCRYlnjKdnsuqL1sIYFBlv3oxo6W1O+X9IZ
------END CERTIFICATE-----
-";
+-----END CERTIFICATE-----";
         }
-
-        $plaintext =$initiatorPassword;
-
-        openssl_public_encrypt($plaintext, $encrypted, $publicKey, OPENSSL_PKCS1_PADDING);
-
-        return  base64_encode($encrypted);
     }
 
+    /**
+     * Get the base URL for Mpesa API based on environment
+     *
+     * @param bool $isLive Whether to use production or sandbox environment
+     * @return string The base URL
+     */
+    protected function getBaseUrl(bool $isLive): string
+    {
+        return $isLive ? self::MPESA_PRODUCTION_URL : self::MPESA_SANDBOX_URL;
+    }
 
+    /**
+     * Send a response to Mpesa API to confirm transaction processing
+     *
+     * @param string $message Optional custom message
+     * @return string JSON response
+     */
+    public function finishTransaction(string $message = "Confirmation Service request accepted successfully"): string
+    {
+        $resultArray = [
+            "ResultDesc" => $message,
+            "ResultCode" => "0"
+        ];
 
+        return json_encode($resultArray);
+    }
+
+    /**
+     * Make a POST request to the Mpesa API
+     *
+     * @param string $url The URL to send the request to
+     * @param array $data The data to send
+     * @param string $token The access token for authentication
+     * @param bool $verifySSL Whether to verify SSL certificate
+     * @return string The response from the API
+     * @throws RuntimeException If the request fails
+     */
+    protected function makePostRequest(string $url, array $data, string $token, bool $verifySSL = true): string
+    {
+        $curl = curl_init();
+        curl_setopt($curl, CURLOPT_URL, $url);
+        curl_setopt($curl, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json',
+            'Authorization: Bearer ' . $token
+        ]);
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($curl, CURLOPT_POST, true);
+        curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($data));
+        curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, $verifySSL);
+
+        $response = curl_exec($curl);
+        $error = curl_error($curl);
+
+        curl_close($curl);
+
+        if ($response === false) {
+            throw new RuntimeException("cURL Error: " . $error);
+        }
+
+        return $response;
+    }
 }

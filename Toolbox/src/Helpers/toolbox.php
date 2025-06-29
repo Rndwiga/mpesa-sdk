@@ -1,34 +1,49 @@
 <?php
 /**
- * Created by PhpStorm.
- * User: rndwiga
- * Date: 9/13/18
- * Time: 12:09 PM
- * @param null $authTheme
- * @param null $frontendTheme
- * @return \Illuminate\Config\Repository|mixed
+ * Toolbox Helper Functions
+ *
+ * This file contains helper functions that can be used throughout the application.
+ *
+ * @package Rndwiga\Toolbox
+ * @author Raphael Ndwiga <raphndwi@gmail.com>
  */
 
-use Illuminate\Support\Facades\Session;
-
-    if (! function_exists('storagePath')){
-         function storagePath(string $path = null){
-            if (function_exists('storage_path')){
-                return storage_path($path);
-            }
-            return __DIR__ . $path;
-            //return  dirname(__DIR__,3);
+/**
+ * Get the storage path for a given file or directory
+ *
+ * @param string|null $path The path to append to the storage path
+ * @return string The full storage path
+ */
+if (! function_exists('storagePath')) {
+    function storagePath(string $path = null): string {
+        if (function_exists('storage_path')) {
+            // Use Laravel's storage_path if available
+            return storage_path($path);
         }
+        return __DIR__ . ($path ?? '');
     }
+}
 
-    if (! function_exists('env')){
-         function env(string $variable){
-             return getenv($variable);
-        }
+/**
+ * Get an environment variable value
+ *
+ * @param string $variable The name of the environment variable
+ * @return string|false The value of the environment variable or false if not found
+ */
+if (! function_exists('env')) {
+    function env(string $variable) {
+        return getenv($variable);
     }
+}
 
-    if (! function_exists('str_slug')){
-        function str_slug($string){
-            return strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $string), '-'));
-        }
+/**
+ * Convert a string to a URL-friendly slug
+ *
+ * @param string $string The string to convert
+ * @return string The slugified string
+ */
+if (! function_exists('str_slug')) {
+    function str_slug(string $string): string {
+        return strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $string), '-'));
     }
+}

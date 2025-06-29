@@ -1,40 +1,62 @@
 <?php
 /**
- * Created by PhpStorm.
- * User: rndwiga
- * Date: 3/27/18
- * Time: 3:29 PM
+ * AppStorage Class
+ *
+ * A class for managing storage paths and operations.
+ *
+ * @package Rndwiga\Toolbox\Infrastructure\Services
+ * @author Raphael Ndwiga <raphndwi@gmail.com>
  */
 
 namespace Rndwiga\Toolbox\Infrastructure\Services;
 
-
 class AppStorage
 {
-
+    /**
+     * The root folder name
+     *
+     * @var string
+     */
     private $rootFolder;
+
+    /**
+     * The log folder name
+     *
+     * @var string
+     */
     private $logFolder;
-    private $useDate;
+
+    /**
+     * Whether to use date in the path
+     *
+     * @var bool
+     */
+    private $useDate = true;
 
     /**
      * AppStorage constructor.
+     *
+     * @param string $rootFolder The root folder name
      */
-    public function __construct()
+    public function __construct($rootFolder = 'appLogs')
     {
-        $this->setRootFolder();
+        $this->setRootFolder($rootFolder);
     }
 
-
     /**
-     * @return mixed
+     * Get the root folder name
+     *
+     * @return string The root folder name
      */
-    public function getRootFolder():string
+    public function getRootFolder()
     {
         return $this->rootFolder;
     }
 
     /**
-     * @param mixed $rootFolder
+     * Set the root folder name
+     *
+     * @param string $rootFolder The root folder name
      * @return AppStorage
      */
     public function setRootFolder($rootFolder = 'appLogs')
@@ -44,15 +66,19 @@ class AppStorage
     }
 
     /**
-     * @return mixed
+     * Get the log folder name
+     *
+     * @return string The log folder name
      */
-    public function getLogFolder():string
+    public function getLogFolder()
     {
         return $this->logFolder;
     }
 
     /**
-     * @param mixed $logFolder
+     * Set the log folder name
+     *
+     * @param string $logFolder The log folder name
      * @return AppStorage
      */
     public function setLogFolder($logFolder)
@@ -62,99 +88,133 @@ class AppStorage
     }
 
     /**
-     * @return mixed
+     * Get whether to use date in the path
+     *
+     * @return bool Whether to use date in the path
      */
-    public function getUseDate():bool
+    public function getUseDate()
     {
         return $this->useDate;
     }
 
     /**
-     * @param mixed $useDate
+     * Set whether to use date in the path
+     *
+     * @param bool $useDate Whether to use date in the path
      * @return AppStorage
      */
     public function setUseDate($useDate)
     {
-        $this->useDate = $useDate;
+        $this->useDate = (bool)$useDate;
         return $this;
     }
 
-    public function mockStorage(){
-        $this->setLogFolder("data")->createStorage();
+    /**
+     * Create a storage path for testing
+     *
+     * @return string The created storage path
+     */
+    public function mockStorage()
+    {
+        return $this->setLogFolder("data")->createStorage();
     }
 
+    /**
+     * Create a storage path based on the configured settings
+     *
+     * @return string The created storage path
+     * @throws \RuntimeException If the directory cannot be created
+     */
     public function createStorage()
     {
-        $folder = '/storage/'. date('Y').'/'.date('M').'/'."{$this->getRootFolder()}/".date('Y-m-d').'/'.$this->getLogFolder(); // setting the folder name
+        // Build the folder path
+        $folder = '/storage/';
 
-        if (!is_dir(storagePath($folder)))
-        {
-            mkdir(storagePath($folder), 0777, true); //creating the folder docs if it does not already exist
+        if ($this->getUseDate()) {
+            $folder .= date('Y') . '/' . date('M') . '/';
         }
-        if (!is_dir(storagePath($folder)))
-        {
-            //creating folder based on day if it does not exist. If it does, it is not created
-            if (!mkdir(storagePath($folder), 0777, true)) {
-                die('Failed to create folders...'); // Die if the function mkdir cannot run
-            }
-            return $folder;
 
-        } elseif (is_dir(storagePath($folder))){ //check if the folder is created and return it
-            return $folder;
-        } else {
-            return $folder;
+        $folder .= $this->getRootFolder() . '/';
+
+        if ($this->getUseDate()) {
+            $folder .= date('Y-m-d') . '/';
+        }
+
+        $folder .= $this->getLogFolder();
+
+        // Create the directory if it doesn't exist
+        $fullPath = storagePath($folder);
+
+        if (!is_dir($fullPath)) {
+            if (!mkdir($fullPath, 0777, true)) {
+                throw new \RuntimeException('Failed to create directory: ' . $fullPath);
+            }
+        }
+
+        return $folder;
+    }
+
+    /**
+     * Compress a file using gzip
+     *
+     * @param string $source Path to file that should be compressed
+     * @param int $level GZIP compression level (default: 9)
+     * @param bool $appendExtension Whether to append .gz to the filename
+     * @return string|false New filename if success, or false if operation fails
+     */
+    public static function gzCompressFile($source, $level = 9, $appendExtension = false)
+    {
+        if (!file_exists($source)) {
+            return false;
+        }
+
+        $destination = $appendExtension ? $source . '.gz' : $source;
+        $mode = 'wb' . $level;
+
+        try {
+            $fpOut = gzopen($destination, $mode);
+            if ($fpOut === false) {
+                return false;
+            }
+
+            $fpIn = fopen($source, 'rb');
+            if ($fpIn === false) {
+                gzclose($fpOut);
+                return false;
+            }
+
+            while (!feof($fpIn)) {
+                $data = fread($fpIn, 1024 * 512);
+                if ($data === false) {
+                    fclose($fpIn);
+                    gzclose($fpOut);
+                    return false;
+                }
+
+                gzwrite($fpOut, $data);
+            }
+
+            fclose($fpIn);
+            gzclose($fpOut);
+
+            return $destination;
+        } catch (\Exception $e) {
+            return false;
         }
     }
 
     /**
-     * GZIPs a file on disk (appending .gz to the name)
+     * Generate a random ID
      *
-     * From http://stackoverflow.com/questions/6073397/how-do-you-create-a-gz-file-using-php
-     * Based on function by Kioob at:
-     * http://www.php.net/manual/en/function.gzwrite.php#34955
-     *
-     * @param string $source Path to file that should be compressed
-     * @param integer $level GZIP compression level (default: 9)
-     * @param bool $fileFormat
-     * @return string New filename (with .gz appended) if success, or false if operation fails
-     * @internal param bool|string $format
+     * @return string The generated random ID
      */
-    public static function gzCompressFile($source, $level = 9, $fileFormat = false){
-        if ($fileFormat){
-            $destination = $source . '.gz';
-        }else{
-            $destination = $source;
-        }
-        $mode = 'wb' . $level;
-        $error = false;
-        if ($fp_out = gzopen($destination, $mode)) {
-            if ($fp_in = fopen($source,'rb')) {
-                while (!feof($fp_in))
-                    gzwrite($fp_out, fread($fp_in, 1024 * 512));
-                fclose($fp_in);
-            } else {
-                $error = true;
-            }
-            gzclose($fp_out);
-        } else {
-            $error = true;
-        }
-        if ($error)
-            return false;
-        else
-            return $destination;
-    }
-
-    public static function generateRandomId(){
+    public static function generateRandomId()
+    {
         $time = time();
-        $currentTime = $time;
-        $random1= rand(0,99999);
-        $random2 = mt_rand();
-        $random = $random1 * $random2;
-        $a= ($currentTime + $random);
-        $un=  uniqid();
-        $conct = $a . $un  . md5($a);
-        $cashflowRandomId = sha1($conct.$un);
-        return $cashflowRandomId;
+        $random = rand(0, 99999) * mt_rand();
+        $uniqueId = uniqid();
+        $combined = ($time + $random) . $uniqueId . md5($time + $random);
+
+        return sha1($combined . $uniqueId);
     }
 }

@@ -11,6 +11,17 @@ namespace Rndwiga\Mpesa\Libraries;
 
 class BaseRequest extends MpesaApiConnection
 {
+    // API endpoints
+    const LIVE_BASE_URL = 'https://api.safaricom.co.ke';
+    const SANDBOX_BASE_URL = 'https://sandbox.safaricom.co.ke';
+
+    // B2C endpoints
+    const B2C_ENDPOINT = '/mpesa/b2c/v1/paymentrequest';
+    const B2C_VALIDATE_ENDPOINT = '/mpesa/b2c-validate-id/v1.0.1/paymentrequest';
+
+    // B2B endpoints
+    const B2B_ENDPOINT = '/mpesa/b2b/v1/paymentrequest';
+
     //B2C Payment Request
     protected $InitiatorName; //string initiator_1
     private $InitiatorPassword;
@@ -30,8 +41,8 @@ class BaseRequest extends MpesaApiConnection
     protected $TransactionID; //alpha-num
     protected $AccountReference;
     protected $ReceiverParty; //numeric [Shortcode]
-    protected $ReceiverIdentifierType; //numeric [11 - Organization Identifier on M-Pesa] $RecieverIdentifierType
-    protected $ApplicationStatus;
+    protected $ReceiverIdentifierType; //numeric [11 - Organization Identifier on M-Pesa]
+    protected $ApplicationStatus; // true for live, false for sandbox
 
 
     public function setApplicationStatus(bool $applicationIsLive){
@@ -170,111 +181,92 @@ class BaseRequest extends MpesaApiConnection
         return $this;
     }
 
-    public function processRequestResponse($callResponse){
+    /**
+     * Make an HTTP request to the Mpesa API
+     *
+     * @param string $endpoint The API endpoint to call
+     * @param array $data The data to send in the request
+     * @param bool $verifySSL Whether to verify SSL certificates
+     * @return string The response from the API
+     */
+    protected function makeApiRequest($endpoint, $data, $verifySSL = true)
+    {
+        if (!isset($this->ApplicationStatus)) {
+            throw new \InvalidArgumentException("Please declare the application status as defined in the documentation");
+        }
 
+        $baseUrl = $this->ApplicationStatus === true ? self::LIVE_BASE_URL : self::SANDBOX_BASE_URL;
+        $url = $baseUrl . $endpoint;
+
+        if (!isset($this->ConsumerKey) || !isset($this->ConsumerSecret)) {
+            throw new \InvalidArgumentException("Consumer key and secret must be set");
+        }
+
+        $token = $this->generateAccessToken($this->ApplicationStatus, $this->ConsumerKey, $this->ConsumerSecret);
+
+        return $this->makePostRequest($url, $data, $token, $verifySSL);
+    }
+
+    /**
+     * Get the common request data for API calls
+     *
+     * @return array The common request data
+     */
+    protected function getCommonRequestData()
+    {
+        return [
+            'InitiatorName' => $this->InitiatorName,
+            'SecurityCredential' => $this->SecurityCredential,
+            'CommandID' => $this->CommandID,
+            'Amount' => $this->Amount,
+            'PartyA' => $this->PartyA,
+            'PartyB' => $this->PartyB,
+            'Remarks' => $this->Remarks,
+            'QueueTimeOutURL' => $this->QueueTimeOutURL,
+            'ResultURL' => $this->ResultURL,
+            'Occasion' => $this->Occasion
+        ];
+    }
+
+    /**
+     * Process the response from the Mpesa API
+     *
+     * @param string $callResponse The response from the API
+     * @return mixed The processed response
+     */
+    public function processRequestResponse($callResponse)
+    {
         $response = json_decode($callResponse);
-        if (isset($response->errorCode)){
+
+        if (isset($response->errorCode)) {
             $errorCode = $response->errorCode;
-            switch ($errorCode){
-                case "400.002.01":
-                    return json_encode([
-                        'errorCode' => $errorCode,
-                        'errorRequestId' => $response->requestId,
-                        'errorDescription' => "Invalid Access Token",
-                        'errorMessage' => $response->errorMessage
-                    ]);
-                    break;
-                case "400.002.02":
-                    return json_encode([
-                        'errorCode' => $errorCode,
-                        'errorRequestId' => $response->requestId,
-                        'errorDescription' => "Bad Request",
-                        'errorMessage' => $response->errorMessage
-                    ]);
-                    break;
-                case "400.002.05":
-                    return json_encode([
-                        'errorCode' => $errorCode,
-                        'errorRequestId' => $response->requestId,
-                        'errorDescription' => "Invalid Request Payload",
-                        'errorMessage' => $response->errorMessage
-                    ]);
-                    break;
-                case "401.002.01":
-                    return json_encode([
-                        'errorCode' => $errorCode,
-                        'errorRequestId' => $response->requestId,
-                        'errorDescription' => "Error Occurred - Invalid Access Token",
-                        'errorMessage' => $response->errorMessage
-                    ]);
-                    break;
-                case "404.001.01":
-                    return json_encode([
-                        'errorCode' => $errorCode,
-                        'errorRequestId' => $response->requestId,
-                        'errorDescription' => "Resource not found",
-                        'errorMessage' => $response->errorMessage
-                    ]);
-                    break;
-                case "404.002.01":
-                    return json_encode([
-                        'errorCode' => $errorCode,
-                        'errorRequestId' => $response->requestId,
-                        'errorDescription' => "Resource not found",
-                        'errorMessage' => $response->errorMessage
-                    ]);
-                    break;
-                case "404.001.03":
-                    return json_encode([
-                        'errorCode' => $errorCode,
-                        'errorRequestId' => $response->requestId,
-                        'errorDescription' => "Invalid Access Token",
-                        'errorMessage' => $response->errorMessage
-                    ]);
-                    break;
-                case "404.001.04":
-                    return json_encode([
-                        'errorCode' => $errorCode,
-                        'errorRequestId' => $response->requestId,
-                        'errorDescription' => "Invalid Authentication Header",
-                        'errorMessage' => $response->errorMessage
-                    ]);
-                    break;
-                case "500.001.1001":
-                    return json_encode([
-                        'errorCode' => $errorCode,
-                        'errorRequestId' => $response->requestId,
-                        'errorDescription' => "Server Error",
-                        'errorMessage' => $response->errorMessage
-                    ]);
-                    break;
-                case "500.002.1001":
-                    return json_encode([
-                        'errorCode' => $errorCode,
-                        'errorRequestId' => $response->requestId,
-                        'errorDescription' => "Server Error",
-                        'errorMessage' => $response->errorMessage
-                    ]);
-                    break;
-                case "500.002.02":
-                    return json_encode([
-                        'errorCode' => $errorCode,
-                        'errorRequestId' => $response->requestId,
-                        'errorDescription' => "Error Occured: Spike Arrest Violation",
-                        'errorMessage' => $response->errorMessage
-                    ]);
-                    break;
-                case "500.002.03":
-                    return json_encode([
-                        'errorCode' => $errorCode,
-                        'errorRequestId' => $response->requestId,
-                        'errorDescription' => "Error Occured: Quota Violation",
-                        'errorMessage' => $response->errorMessage
-                    ]);
-                    break;
-            }
-        }elseif (isset($response->ConversationID)){
+            $errorDescriptions = [
+                "400.002.01" => "Invalid Access Token",
+                "400.002.02" => "Bad Request",
+                "400.002.05" => "Invalid Request Payload",
+                "401.002.01" => "Error Occurred - Invalid Access Token",
+                "404.001.01" => "Resource not found",
+                "404.002.01" => "Resource not found",
+                "404.001.03" => "Invalid Access Token",
+                "404.001.04" => "Invalid Authentication Header",
+                "500.001.1001" => "Server Error",
+                "500.002.1001" => "Server Error",
+                "500.002.02" => "Error Occurred: Spike Arrest Violation",
+                "500.002.03" => "Error Occurred: Quota Violation"
+            ];
+
+            $description = isset($errorDescriptions[$errorCode]) ? $errorDescriptions[$errorCode] : "Unknown Error";
+
+            return json_encode([
+                'errorCode' => $errorCode,
+                'errorRequestId' => $response->requestId ?? null,
+                'errorDescription' => $description,
+                'errorMessage' => $response->errorMessage ?? null
+            ]);
+        } elseif (isset($response->ConversationID)) {
             return true;
         }
+
+        return $callResponse;
     }
 }

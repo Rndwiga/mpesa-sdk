@@ -1,62 +1,133 @@
 <?php
 /**
- * Created by PhpStorm.
- * User: rndwiga
- * Date: 3/27/18
- * Time: 3:29 PM
+ * AppJsonManager Class
+ *
+ * A class for managing JSON data and files.
+ *
+ * @package Rndwiga\Toolbox\Infrastructure\Services
+ * @author Raphael Ndwiga <raphndwi@gmail.com>
  */
 
 namespace Rndwiga\Toolbox\Infrastructure\Services;
 
-use Illuminate\Support\Facades\File;
-use Monolog\Formatter\LineFormatter;
-use Monolog\Handler\StreamHandler;
-use Monolog\Logger;
-
 class AppJsonManager
 {
+    /**
+     * Save data to a JSON file in the specified directory
+     *
+     * @param string $fileName The name of the file
+     * @param string $directoryName The directory name
+     * @param array $payload The data to save
+     * @return array|string The payload with file path or error message
+     */
+    public static function saveToFile($fileName, $directoryName, $payload = [])
+    {
+        try {
+            $storage = (new AppStorage())->setLogFolder($directoryName);
+            $dir = storagePath($storage->createStorage());
+            $path = $dir . '/' . $fileName;
 
-    public static function saveToFile($fileName,$directoryName,$payload = []){
+            $bytes = file_put_contents($path, json_encode($payload, JSON_PRETTY_PRINT));
+            if ($bytes === false) {
+                return 'could not write to file';
+            }
 
-        $dir = storage_path((new AppStorage())->setLogFolder($directoryName));
-        $path = $dir.$fileName;
-        $bytes = File::put($path,json_encode($payload,JSON_PRETTY_PRINT));
-        if ($bytes === false){
-            return 'could not write to file';
+            return array_merge((array)$payload, ['file' => $path]);
+        } catch (\Exception $e) {
+            return 'Error: ' . $e->getMessage();
         }
-        return array_merge((array)$payload,['file'=>$path]);
     }
 
-    public static function saveToFilePath(string $filePath, array $payLoad){
-        $bytes = File::put($filePath,json_encode($payLoad,JSON_PRETTY_PRINT));
-        if ($bytes === false){
-            return 'could not write to file';
+    /**
+     * Save data to a JSON file at the specified path
+     *
+     * @param string $filePath The full path to the file
+     * @param array $payload The data to save
+     * @return array|string The payload with file path or error message
+     */
+    public static function saveToFilePath(string $filePath, array $payload)
+    {
+        try {
+            $bytes = file_put_contents($filePath, json_encode($payload, JSON_PRETTY_PRINT));
+            if ($bytes === false) {
+                return 'could not write to file';
+            }
+
+            return array_merge((array)$payload, ['file' => $filePath]);
+        } catch (\Exception $e) {
+            return 'Error: ' . $e->getMessage();
         }
-        return array_merge((array)$payLoad,['file'=>$filePath]);
     }
 
-    public static function readJsonFile($file, $toArray = false){
-        $jsonData = file_get_contents($file);
-        if ($toArray === true){
-           return json_decode($jsonData, true);
+    /**
+     * Read a JSON file and decode its contents
+     *
+     * @param string $file The path to the JSON file
+     * @param bool $toArray Whether to convert to array (true) or object (false)
+     * @return mixed|null The decoded JSON data or null on error
+     */
+    public static function readJsonFile($file, $toArray = false)
+    {
+        try {
+            if (!file_exists($file)) {
+                return null;
+            }
+
+            $jsonData = file_get_contents($file);
+            if ($jsonData === false) {
+                return null;
+            }
+
+            return json_decode($jsonData, $toArray);
+        } catch (\Exception $e) {
+            return null;
         }
-        return json_decode($jsonData);
     }
 
-    public static function addDataToJsonFile($file,$dataToAdd = []){
-        $jsonData = file_get_contents($file);
-        $arrayData = json_decode($jsonData, true);
+    /**
+     * Add data to an existing JSON file
+     *
+     * @param string $file The path to the JSON file
+     * @param array $dataToAdd The data to add
+     * @return string|bool The file path on success or false on error
+     */
+    public static function addDataToJsonFile($file, $dataToAdd = [])
+    {
+        try {
+            if (!file_exists($file)) {
+                return false;
+            }
 
-        array_push($arrayData,(array)$dataToAdd);
-        $backToJson = json_encode($arrayData, JSON_PRETTY_PRINT);
-        $bytes = File::put($file,$backToJson);
-        if ($bytes === false){
-            return 'could not write to file';
+            $jsonData = file_get_contents($file);
+            if ($jsonData === false) {
+                return false;
+            }
+
+            $arrayData = json_decode($jsonData, true);
+            if ($arrayData === null) {
+                $arrayData = [];
+            }
+
+            array_push($arrayData, (array)$dataToAdd);
+            $backToJson = json_encode($arrayData, JSON_PRETTY_PRINT);
+
+            $bytes = file_put_contents($file, $backToJson);
+            if ($bytes === false) {
+                return false;
+            }
+
+            return $file;
+        } catch (\Exception $e) {
+            return false;
         }
-
-        return $file;
     }
 
+    /**
+     * Validate JSON data
+     *
+     * @param string $string The JSON string to validate
+     * @return array The validation result with status and response
+     */
     public static function validateJsonData($string)
     {
         // decode the JSON data
@@ -79,15 +150,12 @@ class AppJsonManager
             case JSON_ERROR_SYNTAX:
                 $error = 'Syntax error, malformed JSON.';
                 break;
-            // PHP >= 5.3.3
             case JSON_ERROR_UTF8:
                 $error = 'Malformed UTF-8 characters, possibly incorrectly encoded.';
                 break;
-            // PHP >= 5.5.0
             case JSON_ERROR_RECURSION:
                 $error = 'One or more recursive references in the value to be encoded.';
                 break;
-            // PHP >= 5.5.0
             case JSON_ERROR_INF_OR_NAN:
                 $error = 'One or more NAN or INF values in the value to be encoded.';
                 break;
@@ -95,12 +163,11 @@ class AppJsonManager
                 $error = 'A value of a type that cannot be encoded was given.';
                 break;
             default:
-                $error = 'Unknown JSON error occured.';
+                $error = 'Unknown JSON error occurred.';
                 break;
         }
 
         if ($error !== '') {
-            // throw the Exception or exit // or whatever :)
             return [
                 'status' => 'fail',
                 'response' => $error

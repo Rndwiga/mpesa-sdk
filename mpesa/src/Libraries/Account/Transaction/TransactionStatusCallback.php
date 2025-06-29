@@ -1,142 +1,200 @@
 <?php
 /**
- * Created by PhpStorm.
- * User: rndwiga
- * Date: 5/8/18
- * Time: 3:17 PM
+ * TransactionStatusCallback
+ *
+ * Handles callbacks from Mpesa API for Transaction Status queries.
+ *
+ * @package Rndwiga\Mpesa\Libraries\Account\Transaction
+ * @author Raphael Ndwiga <raphael@raphaelndwiga.africa>
  */
 
-namespace Rndwiga\Mpesa\Libraries\Account;
+namespace Rndwiga\Mpesa\Libraries\Account\Transaction;
 
+use InvalidArgumentException;
 use Rndwiga\Mpesa\Libraries\MpesaBaseClass;
 
 class TransactionStatusCallback extends MpesaBaseClass
 {
-    public function processTransactionRequestResponse(array $transactionRequest, bool $isRequest = true){
+    /**
+     * Process a transaction request response or result
+     *
+     * This method determines the status of a transaction request or response
+     * and adds a status indicator to the response array.
+     *
+     * @param array $transactionRequest The request or response data from Mpesa API
+     * @param bool $isRequest Whether this is a request (true) or response (false)
+     * @return array The processed response with added status indicator
+     * @throws InvalidArgumentException If the response data is invalid
+     */
+    public function processTransactionRequestResponse(array $transactionRequest, bool $isRequest = true): array
+    {
+        // Validate input
+        if (empty($transactionRequest)) {
+            throw new InvalidArgumentException('Transaction request response cannot be empty');
+        }
 
-        if ($isRequest === true){
-            if (isset($transactionRequest['ResponseCode'])){
-                if ($transactionRequest['ResponseCode'] == 0){
-                    $transactionRequest['transactionRequestStatus'] = 'success';
-                    return $transactionRequest;
-                }else{
-                    $transactionRequest['transactionRequestStatus'] = 'fail';
-                    return $transactionRequest;
-                }
-            }elseif(isset($transactionRequest['fault'])){
+        // Process request
+        if ($isRequest === true) {
+            // Check if it's a success response
+            if (isset($transactionRequest['ResponseCode'])) {
+                $transactionRequest['transactionRequestStatus'] = 
+                    ($transactionRequest['ResponseCode'] == 0) ? 'success' : 'fail';
+                return $transactionRequest;
+            } 
+            // Check if it's an error response
+            elseif (isset($transactionRequest['fault'])) {
                 $transactionRequest['transactionRequestStatus'] = 'fault';
                 return $transactionRequest;
             }
-
-        }else{
-            if ($transactionRequest['resultCode'] == 0){
-                $transactionRequest['transactionResultStatus'] = 'success';
-                return $transactionRequest;
-            }else{
-                $transactionRequest['transactionResultStatus'] = 'fail';
-                return $transactionRequest;
+            // Invalid response format
+            else {
+                throw new InvalidArgumentException('Invalid transaction request response format');
             }
+        } 
+        // Process response
+        else {
+            if (!isset($transactionRequest['resultCode'])) {
+                throw new InvalidArgumentException('Invalid transaction response format: Missing resultCode');
+            }
+
+            $transactionRequest['transactionResultStatus'] = 
+                ($transactionRequest['resultCode'] == 0) ? 'success' : 'fail';
+            return $transactionRequest;
         }
     }
 
     /**
-     * Use this function to process the Transaction status request callback
-     * @param array $resultArray
-     * @param bool $isLive
-     * @return array
+     * Process a Transaction Status request callback from Mpesa API
+     *
+     * This method extracts and formats the data from a Transaction Status callback.
+     * It handles both live and sandbox environments, which have slightly different
+     * response structures.
+     * 
+     * Example callback data structure:
+     * ```json
+     * {
+     *   "Result": {
+     *     "ResultType": 0,
+     *     "ResultCode": 0,
+     *     "ResultDesc": "The service request is processed successfully.",
+     *     "OriginatorConversationID": "29115-34620561-1",
+     *     "ConversationID": "AG_20180708_00004636b4e35055927d",
+     *     "TransactionID": "LK56GT016",
+     *     "ResultParameters": {
+     *       "ResultParameter": [
+     *         {
+     *           "Key": "ReceiptNo",
+     *           "Value": "LK56GT016"
+     *         },
+     *         {
+     *           "Key": "ConversationID",
+     *           "Value": "AG_20180708_00004636b4e35055927d"
+     *         },
+     *         // ... more parameters
+     *       ]
+     *     }
+     *   }
+     * }
+     * ```
+     *
+     * @param array $resultArray The transaction status callback data from Mpesa API
+     * @param bool $isLive Whether this is a live (true) or sandbox (false) environment
+     * @return array Formatted response with extracted transaction details
+     * @throws InvalidArgumentException If the callback data is invalid
      */
-    public function processTransactionStatusRequestCallback(array $resultArray, bool $isLive = true){
-       if ($isLive === true){
-           $callbackData=json_encode($resultArray);
-           $callbackData=json_decode($callbackData);
-           $resultType=$callbackData->Result->ResultType;
-           $resultCode=$callbackData->Result->ResultCode;
-           $resultDesc=$callbackData->Result->ResultDesc;
-           $originatorConversationID=$callbackData->Result->OriginatorConversationID;
-           $conversationID=$callbackData->Result->ConversationID;
-           $transactionID=$callbackData->Result->TransactionID;
-           $ReceiptNo=$callbackData->Result->ResultParameters->ResultParameter[0]->Value;
-           $ConversationID=$callbackData->Result->ResultParameters->ResultParameter[1]->Value;
-           $FinalisedTime=$callbackData->Result->ResultParameters->ResultParameter[2]->Value;
-           $Amount=$callbackData->Result->ResultParameters->ResultParameter[3]->Value;
-           $TransactionStatus=$callbackData->Result->ResultParameters->ResultParameter[4]->Value;
-           $ReasonType=$callbackData->Result->ResultParameters->ResultParameter[5]->Value;
-           $TransactionReason=isset($callbackData->Result->ResultParameters->ResultParameter[6]->Value)?$callbackData->Result->ResultParameters->ResultParameter[6]->Value:''; //
-           $DebitPartyCharges=$callbackData->Result->ResultParameters->ResultParameter[7]->Value;
-           $DebitAccountType=$callbackData->Result->ResultParameters->ResultParameter[8]->Value;
-           $InitiatedTime=$callbackData->Result->ResultParameters->ResultParameter[9]->Value;
-           $OriginatorConversationID=$callbackData->Result->ResultParameters->ResultParameter[10]->Value;
-           $CreditPartyName=$callbackData->Result->ResultParameters->ResultParameter[11]->Value;
-           $DebitPartyName=$callbackData->Result->ResultParameters->ResultParameter[12]->Value;
-           $result=[
-               "resultType" =>$resultType,
-               "resultCode"=>$resultCode,
-               "resultDesc"=>$resultDesc,
-               "StatusOriginatorConversationID"=>$originatorConversationID,
-               "StatusConversationID"=>$conversationID,
-               "TransactionID"=>$transactionID,
-               "ReceiptNo"=>$ReceiptNo,
-               "ConversationID"=>$ConversationID,
-               "FinalisedTime"=>$this->processCompletedTime($FinalisedTime),
-               "Amount"=>$Amount,
-               "TransactionStatus"=>$TransactionStatus,
-               "ReasonType"=>$ReasonType,
-               "TransactionReason"=>$TransactionReason,
-               "DebitPartyCharges"=>$DebitPartyCharges,
-               "DebitAccountType"=>$DebitAccountType,
-               "InitiatedTime"=>$this->processCompletedTime($InitiatedTime),
-               "OriginatorConversationID"=>$OriginatorConversationID,
-               "CreditPartyName"=>$CreditPartyName,
-               "DebitPartyName"=>$DebitPartyName
-           ];
-           return $result;
-       }else{
-           $callbackData=json_encode($resultArray);
-           $callbackData=json_decode($callbackData);
-           $resultType=$callbackData->Result->ResultType;
-           $resultCode=$callbackData->Result->ResultCode;
-           $resultDesc=$callbackData->Result->ResultDesc;
+    public function processTransactionStatusRequestCallback(array $resultArray, bool $isLive = true): array
+    {
+        // Validate input
+        if (empty($resultArray)) {
+            throw new InvalidArgumentException('Transaction status result array cannot be empty');
+        }
 
-           $originatorConversationID=$callbackData->Result->OriginatorConversationID;
-           $conversationID=$callbackData->Result->ConversationID;
+        // Convert array to object for easier access
+        $callbackData = json_decode(json_encode($resultArray));
 
-           $transactionID=$callbackData->Result->TransactionID;
-           $DebitPartyName=$callbackData->Result->ResultParameters->ResultParameter[0]->Value;
-           $CreditPartyName=$callbackData->Result->ResultParameters->ResultParameter[1]->Value;
-           $OriginatorConversationID=$callbackData->Result->ResultParameters->ResultParameter[2]->Value;
-           $InitiatedTime=$callbackData->Result->ResultParameters->ResultParameter[3]->Value;
-           $DebitAccountType=$callbackData->Result->ResultParameters->ResultParameter[4]->Value;
-           $DebitPartyCharges=$callbackData->Result->ResultParameters->ResultParameter[5]->Value;
-           $TransactionReason=isset($callbackData->Result->ResultParameters->ResultParameter[6]->Value)?$callbackData->Result->ResultParameters->ResultParameter[6]->Value:'';
-           $ReasonType=$callbackData->Result->ResultParameters->ResultParameter[7]->Value;
-           $TransactionStatus=$callbackData->Result->ResultParameters->ResultParameter[8]->Value;
-           $FinalisedTime=$callbackData->Result->ResultParameters->ResultParameter[9]->Value;
-           $Amount=$callbackData->Result->ResultParameters->ResultParameter[10]->Value;
-           $ConversationID=$callbackData->Result->ResultParameters->ResultParameter[11]->Value;
-           $ReceiptNo=$callbackData->Result->ResultParameters->ResultParameter[12]->Value;
-           $result=[
-               "resultType" =>$resultType,
-               "resultCode"=>$resultCode,
-               "resultDesc"=>$resultDesc,
-               "StatusOriginatorConversationID"=>$originatorConversationID,
-               "StatusConversationID"=>$conversationID,
-               "TransactionID"=>$transactionID,
-               "ReceiptNo"=>$ReceiptNo,
-               "ConversationID"=>$ConversationID,
-               "FinalisedTime"=>$this->processCompletedTime($FinalisedTime),
-               "Amount"=>$Amount,
-               "TransactionStatus"=>$TransactionStatus,
-               "ReasonType"=>$ReasonType,
-               "TransactionReason"=>$TransactionReason,
-               "DebitPartyCharges"=>$DebitPartyCharges,
-               "DebitAccountType"=>$DebitAccountType,
-               "InitiatedTime"=>$this->processCompletedTime($InitiatedTime),
-               "OriginatorConversationID"=>$OriginatorConversationID,
-               "CreditPartyName"=>$CreditPartyName,
-               "DebitPartyName"=>$DebitPartyName
-           ];
-           return $result;
-       }
+        // Validate callback data structure
+        if (!isset($callbackData->Result) || 
+            !isset($callbackData->Result->ResultCode) || 
+            !isset($callbackData->Result->ResultParameters) ||
+            !isset($callbackData->Result->ResultParameters->ResultParameter)) {
+            throw new InvalidArgumentException('Invalid callback data structure: Missing required fields');
+        }
 
+        // Extract common fields
+        $resultType = $callbackData->Result->ResultType ?? null;
+        $resultCode = $callbackData->Result->ResultCode ?? null;
+        $resultDesc = $callbackData->Result->ResultDesc ?? null;
+        $originatorConversationID = $callbackData->Result->OriginatorConversationID ?? null;
+        $conversationID = $callbackData->Result->ConversationID ?? null;
+        $transactionID = $callbackData->Result->TransactionID ?? null;
+
+        // Get result parameters
+        $resultParams = $callbackData->Result->ResultParameters->ResultParameter;
+
+        // Different parameter order based on environment
+        if ($isLive) {
+            // Live environment parameter mapping
+            $paramMap = [
+                'ReceiptNo' => 0,
+                'ConversationID' => 1,
+                'FinalisedTime' => 2,
+                'Amount' => 3,
+                'TransactionStatus' => 4,
+                'ReasonType' => 5,
+                'TransactionReason' => 6,
+                'DebitPartyCharges' => 7,
+                'DebitAccountType' => 8,
+                'InitiatedTime' => 9,
+                'OriginatorConversationID' => 10,
+                'CreditPartyName' => 11,
+                'DebitPartyName' => 12
+            ];
+        } else {
+            // Sandbox environment parameter mapping
+            $paramMap = [
+                'DebitPartyName' => 0,
+                'CreditPartyName' => 1,
+                'OriginatorConversationID' => 2,
+                'InitiatedTime' => 3,
+                'DebitAccountType' => 4,
+                'DebitPartyCharges' => 5,
+                'TransactionReason' => 6,
+                'ReasonType' => 7,
+                'TransactionStatus' => 8,
+                'FinalisedTime' => 9,
+                'Amount' => 10,
+                'ConversationID' => 11,
+                'ReceiptNo' => 12
+            ];
+        }
+
+        // Extract values using the parameter map
+        $values = [];
+        foreach ($paramMap as $key => $index) {
+            $values[$key] = isset($resultParams[$index]) ? $resultParams[$index]->Value ?? null : null;
+        }
+
+        // Format the response
+        return [
+            "resultType" => $resultType,
+            "resultCode" => $resultCode,
+            "resultDesc" => $resultDesc,
+            "StatusOriginatorConversationID" => $originatorConversationID,
+            "StatusConversationID" => $conversationID,
+            "TransactionID" => $transactionID,
+            "ReceiptNo" => $values['ReceiptNo'] ?? null,
+            "ConversationID" => $values['ConversationID'] ?? null,
+            "FinalisedTime" => isset($values['FinalisedTime']) ? $this->processCompletedTime($values['FinalisedTime']) : null,
+            "Amount" => $values['Amount'] ?? null,
+            "TransactionStatus" => $values['TransactionStatus'] ?? null,
+            "ReasonType" => $values['ReasonType'] ?? null,
+            "TransactionReason" => $values['TransactionReason'] ?? '',
+            "DebitPartyCharges" => $values['DebitPartyCharges'] ?? null,
+            "DebitAccountType" => $values['DebitAccountType'] ?? null,
+            "InitiatedTime" => isset($values['InitiatedTime']) ? $this->processCompletedTime($values['InitiatedTime']) : null,
+            "OriginatorConversationID" => $values['OriginatorConversationID'] ?? null,
+            "CreditPartyName" => $values['CreditPartyName'] ?? null,
+            "DebitPartyName" => $values['DebitPartyName'] ?? null
+        ];
     }
 }

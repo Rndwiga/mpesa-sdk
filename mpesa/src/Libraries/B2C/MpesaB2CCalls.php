@@ -54,119 +54,99 @@ class MpesaB2CCalls extends BaseRequest
     }
 
     /**
-     * @return string
+     * Make a B2C API call
+     * 
+     * @param int|null $amount The amount to transfer (optional if already set)
+     * @param bool $verifySSL Whether to verify SSL certificates
+     * @return string The API response
      */
-
-    public function makeB2cCall(){
-        if(!isset($this->ApplicationStatus)){
-            die("please declare the application status as defined in the documentation");
+    public function makeB2cCall($amount = null, $verifySSL = true)
+    {
+        // Set the amount if it's provided as a parameter
+        if ($amount !== null) {
+            $this->setAmount($amount);
         }
-        if( $this->ApplicationStatus == true){
-            $url = 'https://api.safaricom.co.ke/mpesa/b2c/v1/paymentrequest';
-        }elseif ($this->ApplicationStatus== false){
-            $url = 'https://sandbox.safaricom.co.ke/mpesa/b2c/v1/paymentrequest';
-        }else{
-            return json_encode(["Message"=>"invalid application status"]);
+
+        // Validate required fields
+        if (!isset($this->InitiatorName) || !isset($this->SecurityCredential) || 
+            !isset($this->CommandID) || !isset($this->Amount) || 
+            !isset($this->PartyA) || !isset($this->PartyB) || 
+            !isset($this->QueueTimeOutURL) || !isset($this->ResultURL)) {
+            throw new \InvalidArgumentException("Missing required parameters for B2C call");
         }
-        $token = $this->generateAccessToken($this->ApplicationStatus,$this->ConsumerKey,$this->ConsumerSecret);
 
-        $curl = curl_init();
-        curl_setopt($curl, CURLOPT_URL, $url);
-        curl_setopt($curl, CURLOPT_HTTPHEADER, array('Content-Type:application/json','Authorization:Bearer '.$token));
-
-
-        $curl_post_data = array(
+        // Prepare request data
+        $requestData = [
             'InitiatorName' => $this->InitiatorName,
             'SecurityCredential' => $this->SecurityCredential,
-            'CommandID' => $this->CommandID ,
+            'CommandID' => $this->CommandID,
             'Amount' => $this->Amount,
             'PartyA' => $this->PartyA,
-            'PartyB' => "$this->PartyB",
+            'PartyB' => (string)$this->PartyB, // Cast to string as required by the API
             'Remarks' => $this->Remarks,
             'QueueTimeOutURL' => $this->QueueTimeOutURL,
             'ResultURL' => $this->ResultURL,
             'Occasion' => $this->Occasion
-        );
+        ];
 
-        $data_string = json_encode($curl_post_data);
-        if(env('APPLICATION_STATUS') == false)
-        {
-            curl_setopt($curl, CURLOPT_FOLLOWLOCATION, TRUE);
-            curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
-        }
-        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($curl, CURLOPT_POST, true);
-        curl_setopt($curl, CURLOPT_POSTFIELDS, $data_string);
-
-        $curl_response = curl_exec($curl);
-        $err = curl_error($curl);
-
-        curl_close($curl);
-
-        if ($err) {
-            $curl_response = "cURL Error #:" . $err;
-            (new AppLogger('mpesaSDKApp_B2C','b2c_success_request'))->logInfo([$curl_response]);
-
-            return $curl_response;
-        } else {
-            return $curl_response;
+        try {
+            // Make the API request
+            $response = $this->makeApiRequest(self::B2C_ENDPOINT, $requestData, $verifySSL);
+            return $response;
+        } catch (\Exception $e) {
+            $errorMessage = "cURL Error: " . $e->getMessage();
+            (new AppLogger('mpesaSDKApp_B2C', 'b2c_failed_request'))->logInfo([$errorMessage]);
+            return json_encode(['error' => $errorMessage]);
         }
     }
-    public function makeB2cCallV2(string $OriginatorConversationID){
-        if(!isset($this->ApplicationStatus)){
-            die("please declare the application status as defined in the documentation");
+
+    /**
+     * Make a B2C API call with an originator conversation ID
+     * 
+     * @param string $originatorConversationID The originator conversation ID
+     * @param int|null $amount The amount to transfer (optional if already set)
+     * @param bool $verifySSL Whether to verify SSL certificates
+     * @return string The API response
+     */
+    public function makeB2cCallV2(string $originatorConversationID, $amount = null, $verifySSL = true)
+    {
+        // Set the amount if it's provided as a parameter
+        if ($amount !== null) {
+            $this->setAmount($amount);
         }
-        if( $this->ApplicationStatus == true){
-            $url = 'https://api.safaricom.co.ke/mpesa/b2c/v1/paymentrequest';
-        }elseif ($this->ApplicationStatus== false){
-            $url = 'https://sandbox.safaricom.co.ke/mpesa/b2c-validate-id/v1.0.1/paymentrequest';
-        }else{
-            return json_encode(["Message"=>"invalid application status"]);
+
+        // Validate required fields
+        if (!isset($this->InitiatorName) || !isset($this->SecurityCredential) || 
+            !isset($this->CommandID) || !isset($this->Amount) || 
+            !isset($this->PartyA) || !isset($this->PartyB) || 
+            !isset($this->QueueTimeOutURL) || !isset($this->ResultURL)) {
+            throw new \InvalidArgumentException("Missing required parameters for B2C call");
         }
-        $token = $this->generateAccessToken($this->ApplicationStatus,$this->ConsumerKey,$this->ConsumerSecret);
 
-        $curl = curl_init();
-        curl_setopt($curl, CURLOPT_URL, $url);
-        curl_setopt($curl, CURLOPT_HTTPHEADER, array('Content-Type:application/json','Authorization:Bearer '.$token));
-
-
-        $curl_post_data = array(
-            'OriginatorConversationID' => $OriginatorConversationID,
+        // Prepare request data
+        $requestData = [
+            'OriginatorConversationID' => $originatorConversationID,
             'InitiatorName' => $this->InitiatorName,
             'SecurityCredential' => $this->SecurityCredential,
-            'CommandID' => $this->CommandID ,
+            'CommandID' => $this->CommandID,
             'Amount' => $this->Amount,
             'PartyA' => $this->PartyA,
-            'PartyB' => "$this->PartyB",
+            'PartyB' => (string)$this->PartyB, // Cast to string as required by the API
             'Remarks' => $this->Remarks,
             'QueueTimeOutURL' => $this->QueueTimeOutURL,
             'ResultURL' => $this->ResultURL,
             'Occasion' => $this->Occasion
-        );
-        $data_string = json_encode($curl_post_data);
+        ];
 
-        if(env('APPLICATION_STATUS') == false)
-        {
-            curl_setopt($curl, CURLOPT_FOLLOWLOCATION, TRUE);
-            curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
-        }
-
-        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($curl, CURLOPT_POST, true);
-        curl_setopt($curl, CURLOPT_POSTFIELDS, $data_string);
-
-        $curl_response = curl_exec($curl);
-        $err = curl_error($curl);
-
-        curl_close($curl);
-
-        if ($err) {
-            $curl_response = "cURL Error #:" . $err;
-            (new AppLogger('mpesaSDKApp_B2C','b2c_success_request'))->logInfo([$curl_response]);
-
-            return $curl_response;
-        } else {
-            return $curl_response;
+        try {
+            // Make the API request
+            $endpoint = $this->ApplicationStatus === true ? self::B2C_ENDPOINT : self::B2C_VALIDATE_ENDPOINT;
+            $response = $this->makeApiRequest($endpoint, $requestData, $verifySSL);
+            return $response;
+        } catch (\Exception $e) {
+            $errorMessage = "cURL Error: " . $e->getMessage();
+            (new AppLogger('mpesaSDKApp_B2C', 'b2c_failed_request'))->logInfo([$errorMessage]);
+            return json_encode(['error' => $errorMessage]);
         }
     }
 
