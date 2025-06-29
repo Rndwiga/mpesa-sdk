@@ -1,19 +1,20 @@
 <?php
 /**
- * AppLogger Class
+ * Logger
  *
  * A class for logging application data using Monolog.
  *
- * @package Rndwiga\Toolbox\Infrastructure\Services
- * @author Raphael Ndwiga <raphndwi@gmail.com>
+ * @package Rndwiga\Mpesa\Utils
+ * @author Raphael Ndwiga <raphael@raphaelndwiga.africa>
  */
-namespace Rndwiga\Toolbox\Infrastructure\Services;
+namespace Rndwiga\Mpesa\Utils;
 
 use Monolog\Formatter\LineFormatter;
 use Monolog\Handler\StreamHandler;
-use Monolog\Logger;
+use Monolog\Logger as MonologLogger;
+use Psr\Log\LoggerInterface;
 
-class AppLogger
+class Logger implements LoggerInterface
 {
     /**
      * The name of the log file
@@ -39,7 +40,7 @@ class AppLogger
     /**
      * The Monolog logger instance
      *
-     * @var Logger
+     * @var MonologLogger
      */
     private $logger;
 
@@ -51,15 +52,15 @@ class AppLogger
     private $logStorage;
 
     /**
-     * AppLogger constructor.
+     * Logger constructor.
      * 
      * @param string $folderName The folder name for storing logs
      * @param string $fileName The name of the log file (without extension)
      */
     public function __construct(string $folderName, string $fileName)
     {
-        $this->logger = $this->getLogger();
-        $this->logStorage = (new AppStorage())->setLogFolder($folderName)->createStorage();
+        $this->logger = $this->getMonologLogger();
+        $this->logStorage = (new Storage())->setLogFolder($folderName)->createStorage();
         $this->setFileName($fileName);
     }
 
@@ -77,7 +78,7 @@ class AppLogger
      * Set the file name
      * 
      * @param string $fileName The file name
-     * @return AppLogger
+     * @return Logger
      */
     public function setFileName($fileName)
     {
@@ -99,7 +100,7 @@ class AppLogger
      * Set the maximum number of lines
      * 
      * @param int $maxNumberOfLines The maximum number of lines
-     * @return AppLogger
+     * @return Logger
      */
     public function setMaxNumberOfLines($maxNumberOfLines)
     {
@@ -116,21 +117,21 @@ class AppLogger
     {
         switch ($this->logLevel) {
             case 'info':
-                return Logger::INFO;
+                return MonologLogger::INFO;
             case 'notice':
-                return Logger::NOTICE;
+                return MonologLogger::NOTICE;
             case 'warning':
-                return Logger::WARNING;
+                return MonologLogger::WARNING;
             case 'error':
-                return Logger::ERROR;
+                return MonologLogger::ERROR;
             case 'critical':
-                return Logger::CRITICAL;
+                return MonologLogger::CRITICAL;
             case 'alert':
-                return Logger::ALERT;
+                return MonologLogger::ALERT;
             case 'emergency':
-                return Logger::EMERGENCY;
+                return MonologLogger::EMERGENCY;
             default:
-                return Logger::DEBUG;
+                return MonologLogger::DEBUG;
         }
     }
 
@@ -138,7 +139,7 @@ class AppLogger
      * Set the log level
      * 
      * @param string $logLevel The log level (debug, info, notice, warning, error, critical, alert, emergency)
-     * @return AppLogger
+     * @return Logger
      */
     public function setLogLevel(string $logLevel)
     {
@@ -156,11 +157,11 @@ class AppLogger
      * Get the logger instance
      * 
      * @param string $loggerName The name of the logger
-     * @return Logger The logger instance
+     * @return MonologLogger The logger instance
      */
-    public function getLogger(string $loggerName = 'app.logger'): Logger
+    public function getMonologLogger(string $loggerName = 'mpesa.logger'): MonologLogger
     {
-        return new Logger($loggerName);
+        return new MonologLogger($loggerName);
     }
 
     /**
@@ -170,12 +171,13 @@ class AppLogger
      * @param string $level The log level (debug, info, notice, warning, error, critical, alert, emergency)
      * @return bool True if logging was successful, false otherwise
      */
-    public function log(array $dataToLog, string $level = 'debug')
+    public function logData(array $dataToLog, string $level = 'debug')
     {
         $this->setLogLevel($level);
 
         // Trim log file to a max length
-        $path = storagePath("{$this->logStorage}/{$this->getFileName()}.log");
+        $storage = new Storage();
+        $path = $storage->storagePath("{$this->logStorage}/{$this->getFileName()}.log");
 
         try {
             if (!file_exists($path)) {
@@ -240,9 +242,9 @@ class AppLogger
      * @param array $dataToLog The data to log
      * @return bool True if logging was successful, false otherwise
      */
-    public function logDebug(array $dataToLog)
+    public function logDebugData(array $dataToLog)
     {
-        return $this->log($dataToLog, 'debug');
+        return $this->logData($dataToLog, 'debug');
     }
 
     /**
@@ -251,9 +253,9 @@ class AppLogger
      * @param array $dataToLog The data to log
      * @return bool True if logging was successful, false otherwise
      */
-    public function logInfo(array $dataToLog)
+    public function logInfoData(array $dataToLog)
     {
-        return $this->log($dataToLog, 'info');
+        return $this->logData($dataToLog, 'info');
     }
 
     /**
@@ -262,9 +264,9 @@ class AppLogger
      * @param array $dataToLog The data to log
      * @return bool True if logging was successful, false otherwise
      */
-    public function logWarning(array $dataToLog)
+    public function logWarningData(array $dataToLog)
     {
-        return $this->log($dataToLog, 'warning');
+        return $this->logData($dataToLog, 'warning');
     }
 
     /**
@@ -273,9 +275,9 @@ class AppLogger
      * @param array $dataToLog The data to log
      * @return bool True if logging was successful, false otherwise
      */
-    public function logError(array $dataToLog)
+    public function logErrorData(array $dataToLog)
     {
-        return $this->log($dataToLog, 'error');
+        return $this->logData($dataToLog, 'error');
     }
 
     /**
@@ -286,7 +288,8 @@ class AppLogger
      */
     public function getLogFile(string $extension = 'json')
     {
-        $path = storagePath("{$this->logStorage}/{$this->getFileName()}.{$extension}");
+        $storage = new Storage();
+        $path = $storage->storagePath("{$this->logStorage}/{$this->getFileName()}.{$extension}");
 
         try {
             if (!file_exists($path)) {
@@ -309,5 +312,115 @@ class AppLogger
         }
 
         return $path;
+    }
+
+    /**
+     * System is unusable.
+     *
+     * @param string $message
+     * @param array $context
+     * @return void
+     */
+    public function emergency($message, array $context = []): void
+    {
+        $this->logData(array_merge(['message' => $message], $context), 'emergency');
+    }
+
+    /**
+     * Action must be taken immediately.
+     *
+     * @param string $message
+     * @param array $context
+     * @return void
+     */
+    public function alert($message, array $context = []): void
+    {
+        $this->logData(array_merge(['message' => $message], $context), 'alert');
+    }
+
+    /**
+     * Critical conditions.
+     *
+     * @param string $message
+     * @param array $context
+     * @return void
+     */
+    public function critical($message, array $context = []): void
+    {
+        $this->logData(array_merge(['message' => $message], $context), 'critical');
+    }
+
+    /**
+     * Runtime errors that do not require immediate action but should typically
+     * be logged and monitored.
+     *
+     * @param string $message
+     * @param array $context
+     * @return void
+     */
+    public function error($message, array $context = []): void
+    {
+        $this->logData(array_merge(['message' => $message], $context), 'error');
+    }
+
+    /**
+     * Exceptional occurrences that are not errors.
+     *
+     * @param string $message
+     * @param array $context
+     * @return void
+     */
+    public function warning($message, array $context = []): void
+    {
+        $this->logData(array_merge(['message' => $message], $context), 'warning');
+    }
+
+    /**
+     * Normal but significant events.
+     *
+     * @param string $message
+     * @param array $context
+     * @return void
+     */
+    public function notice($message, array $context = []): void
+    {
+        $this->logData(array_merge(['message' => $message], $context), 'notice');
+    }
+
+    /**
+     * Interesting events.
+     *
+     * @param string $message
+     * @param array $context
+     * @return void
+     */
+    public function info($message, array $context = []): void
+    {
+        $this->logData(array_merge(['message' => $message], $context), 'info');
+    }
+
+    /**
+     * Detailed debug information.
+     *
+     * @param string $message
+     * @param array $context
+     * @return void
+     */
+    public function debug($message, array $context = []): void
+    {
+        $this->logData(array_merge(['message' => $message], $context), 'debug');
+    }
+
+    /**
+     * Logs with an arbitrary level.
+     *
+     * @param mixed $level
+     * @param string $message
+     * @param array $context
+     * @return void
+     */
+    public function log($level, $message, array $context = []): void
+    {
+        $this->logData(array_merge(['message' => $message], $context), $level);
     }
 }

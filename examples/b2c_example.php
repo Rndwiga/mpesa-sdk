@@ -5,7 +5,7 @@
  * This example demonstrates how to use the Mpesa API SDK to make a B2C payment.
  */
 
-require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../bootstrap.php';
 
 use Rndwiga\Mpesa\MpesaAPI;
 use Monolog\Logger;
@@ -20,19 +20,19 @@ $logger->pushHandler(new StreamHandler(__DIR__ . '/mpesa.log', Logger::DEBUG));
 // Create a cache
 $cache = new FileCache(__DIR__ . '/cache');
 
-// Replace these with your actual credentials
-$consumerKey = 'your_consumer_key';
-$consumerSecret = 'your_consumer_secret';
-$initiatorName = 'your_initiator_name';
-$initiatorPassword = 'your_initiator_password';
-$shortcode = 'your_shortcode'; // PartyA
-$phoneNumber = '254722000000'; // PartyB
+// Get credentials from environment variables
+$consumerKey = getenv('CONSUMER_KEY');
+$consumerSecret = getenv('CONSUMER_SECRET');
+$initiatorName = getenv('INITIATOR_NAME');
+$initiatorPassword = getenv('SECURITY_CREDENTIAL');
+$shortcode = getenv('PARTY_A'); // PartyA
+$phoneNumber = '254722000000'; // PartyB - This could be dynamic in a real application
 
 // Initialize the Mpesa API with logger and cache
 $mpesa = new MpesaAPI(
     $consumerKey,
     $consumerSecret,
-    false, // false for sandbox, true for production
+    getenv('APPLICATION_STATUS') === 'true', // false for sandbox, true for production
     $logger,
     $cache
 );
@@ -49,8 +49,8 @@ try {
         ->setPartyA($shortcode)
         ->setPartyB($phoneNumber)
         ->setRemarks('Test payment')
-        ->setQueueTimeoutUrl('https://example.com/timeout')
-        ->setResultUrl('https://example.com/result')
+        ->setQueueTimeoutUrl(getenv('QUEUE_TIMEOUT_URL'))
+        ->setResultUrl(getenv('RESULT_URL'))
         ->setOccasion('Test occasion')
         ->makePayment();
 

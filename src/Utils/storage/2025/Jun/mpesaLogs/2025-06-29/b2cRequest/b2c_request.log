@@ -1,0 +1,28 @@
+[2025-06-29T21:54:56.474606+00:00] mpesa.logger.INFO: {"message":"Initializing MpesaAPI","environment":"sandbox"}  
+[2025-06-29T21:54:56.475842+00:00] mpesa.logger.INFO: {"message":"MpesaClient initialized","environment":"sandbox","baseUrl":"https:\/\/sandbox.safaricom.co.ke"}  
+[2025-06-29T21:54:56.476705+00:00] mpesa.logger.INFO: {"message":"Generating security credentials"}  
+[2025-06-29T21:54:56.476800+00:00] mpesa.logger.DEBUG: {"message":"Using certificate path","path":"\/Users\/rndwiga\/Herd\/workpay\/mpesa_sdk\/mpesa\/src\/Client\/..\/certificates\/sandbox_cert.cer","environment":"sandbox"}  
+[2025-06-29T21:54:56.476900+00:00] mpesa.logger.WARNING: {"message":"Certificate file not found, using hardcoded certificate"}  
+[2025-06-29T21:54:56.476972+00:00] mpesa.logger.DEBUG: {"message":"Encrypting initiator password"}  
+[2025-06-29T21:54:56.478664+00:00] mpesa.logger.INFO: {"message":"Security credentials generated successfully"}  
+[2025-06-29T21:54:56.479158+00:00] mpesa.logger.INFO: {"message":"Making API request","endpoint":"\/mpesa\/b2c\/v1\/paymentrequest","url":"https:\/\/sandbox.safaricom.co.ke\/mpesa\/b2c\/v1\/paymentrequest","verifySSL":true}  
+[2025-06-29T21:54:56.479319+00:00] mpesa.logger.DEBUG: {"message":"Request data","data":{"InitiatorName":"your_initiator_name","SecurityCredential":"******","CommandID":"BusinessPayment","Amount":100,"PartyA":"your_shortcode","PartyB":"254722000000","Remarks":"Test payment","QueueTimeOutURL":"https:\/\/example.com\/timeout","ResultURL":"https:\/\/example.com\/result","Occasion":"Test occasion"}}  
+[2025-06-29T21:54:56.479493+00:00] mpesa.logger.INFO: {"message":"Requesting new access token"}  
+[2025-06-29T21:54:56.479676+00:00] mpesa.logger.DEBUG: {"message":"Access token URL","url":"https:\/\/sandbox.safaricom.co.ke\/oauth\/v1\/generate?grant_type=client_credentials"}  
+[2025-06-29T21:54:56.481058+00:00] mpesa.logger.DEBUG: {"message":"Making access token request"}  
+[2025-06-29T21:54:57.099228+00:00] mpesa.logger.ERROR: {"message":"Invalid access token response","response":""}  
+[2025-06-29T21:54:57.100391+00:00] mpesa.logger.INFO: {"message":"B2C Request","success":false,"errorMessage":"Failed to get access token: "}  
+[2025-06-29T22:03:10.045576+00:00] mpesa.logger.INFO: {"message":"Initializing MpesaAPI","environment":"sandbox"}  
+[2025-06-29T22:03:10.046784+00:00] mpesa.logger.INFO: {"message":"MpesaClient initialized","environment":"sandbox","baseUrl":"https:\/\/sandbox.safaricom.co.ke"}  
+[2025-06-29T22:03:10.048450+00:00] mpesa.logger.INFO: {"message":"Generating security credentials"}  
+[2025-06-29T22:03:10.048661+00:00] mpesa.logger.DEBUG: {"message":"Using certificate path","path":"\/Users\/rndwiga\/Herd\/workpay\/mpesa_sdk\/src\/Client\/..\/certificates\/sandbox_cert.cer","environment":"sandbox"}  
+[2025-06-29T22:03:10.048828+00:00] mpesa.logger.WARNING: {"message":"Certificate file not found, using hardcoded certificate"}  
+[2025-06-29T22:03:10.048959+00:00] mpesa.logger.DEBUG: {"message":"Encrypting initiator password"}  
+[2025-06-29T22:03:10.050099+00:00] mpesa.logger.INFO: {"message":"Security credentials generated successfully"}  
+[2025-06-29T22:03:10.050752+00:00] mpesa.logger.INFO: {"message":"Making API request","endpoint":"\/mpesa\/b2c\/v1\/paymentrequest","url":"https:\/\/sandbox.safaricom.co.ke\/mpesa\/b2c\/v1\/paymentrequest","verifySSL":true}  
+[2025-06-29T22:03:10.050937+00:00] mpesa.logger.DEBUG: {"message":"Request data","data":{"InitiatorName":"your_initiator_name","SecurityCredential":"******","CommandID":"BusinessPayment","Amount":100,"PartyA":"your_shortcode","PartyB":"254722000000","Remarks":"Test payment","QueueTimeOutURL":"https:\/\/example.com\/timeout","ResultURL":"https:\/\/example.com\/result","Occasion":"Test occasion"}}  
+[2025-06-29T22:03:10.051100+00:00] mpesa.logger.INFO: {"message":"Requesting new access token"}  
+[2025-06-29T22:03:10.051227+00:00] mpesa.logger.DEBUG: {"message":"Access token URL","url":"https:\/\/sandbox.safaricom.co.ke\/oauth\/v1\/generate?grant_type=client_credentials"}  
+[2025-06-29T22:03:10.051401+00:00] mpesa.logger.DEBUG: {"message":"Making access token request"}  
+[2025-06-29T22:03:10.864952+00:00] mpesa.logger.ERROR: {"message":"Invalid access token response","response":""}  
+[2025-06-29T22:03:10.865630+00:00] mpesa.logger.INFO: {"message":"B2C Request","success":false,"errorMessage":"Failed to get access token: "}  

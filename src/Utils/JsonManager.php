@@ -1,16 +1,16 @@
 <?php
 /**
- * AppJsonManager Class
+ * JsonManager
  *
  * A class for managing JSON data and files.
  *
- * @package Rndwiga\Toolbox\Infrastructure\Services
- * @author Raphael Ndwiga <raphndwi@gmail.com>
+ * @package Rndwiga\Mpesa\Utils
+ * @author Raphael Ndwiga <raphael@raphaelndwiga.africa>
  */
 
-namespace Rndwiga\Toolbox\Infrastructure\Services;
+namespace Rndwiga\Mpesa\Utils;
 
-class AppJsonManager
+class JsonManager
 {
     /**
      * Save data to a JSON file in the specified directory
@@ -23,8 +23,8 @@ class AppJsonManager
     public static function saveToFile($fileName, $directoryName, $payload = [])
     {
         try {
-            $storage = (new AppStorage())->setLogFolder($directoryName);
-            $dir = storagePath($storage->createStorage());
+            $storage = (new Storage())->setLogFolder($directoryName);
+            $dir = $storage->storagePath($storage->createStorage());
             $path = $dir . '/' . $fileName;
 
             $bytes = file_put_contents($path, json_encode($payload, JSON_PRETTY_PRINT));

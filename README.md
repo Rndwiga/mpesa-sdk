@@ -1,40 +1,51 @@
 
-![Logo](http://tyondo.com/tyondo/img/logo.png)
-
 # Safaricom M-Pesa SDK
 
-This is an opinionated fluent Safaricom M-Pesa SDK that provides a simple and elegant way to integrate with the Safaricom M-Pesa API.
+An opinionated fluent Safaricom M-Pesa SDK that provides a simple and elegant way to integrate with the Safaricom M-Pesa API.
 
 ## Table of Contents
 
 - [Tech Stack](#tech-stack)
 - [Installation](#installation)
+- [Requirements](#requirements)
 - [Configuration](#configuration)
 - [Features](#features)
 - [Usage](#usage)
+  - [Initialization](#initialization)
   - [B2C (Business to Customer)](#b2c-business-to-customer)
   - [B2B (Business to Business)](#b2b-business-to-business)
   - [C2B (Customer to Business)](#c2b-customer-to-business)
   - [Express (STK Push)](#express-stk-push)
   - [Account Balance](#account-balance)
   - [Transaction Status](#transaction-status)
+  - [Transaction Reversal](#transaction-reversal)
 - [Handling Callbacks](#handling-callbacks)
-- [Toolbox Utilities](#toolbox-utilities)
+- [Utilities](#utilities)
   - [Logging](#logging)
   - [Storage](#storage)
   - [JSON Management](#json-management)
   - [Helper Functions](#helper-functions)
 - [Error Handling](#error-handling)
+- [Custom Implementations](#custom-implementations)
+  - [Custom Cache Implementation](#custom-cache-implementation)
+- [Examples](#examples)
+- [Testing](#testing)
 - [Contributing](#contributing)
 - [License](#license)
 
 ## Tech Stack
 
-**Server:** Nginx, Apache, PHP
+**Server:** Nginx, Apache, PHP 8.1+
 
 ## Installation 
 
-Clone the project using the following:
+Install the package via Composer:
+
+```bash
+composer require rndwiga/mpesa
+```
+
+Or clone the project:
 
 ```bash 
 git clone https://github.com/Rndwiga/mpesa-sdk.git
@@ -42,38 +53,42 @@ cd mpesa-sdk
 composer update
 ```
 
+## Requirements
+
+- PHP 8.1 or higher
+- phpseclib/phpseclib 2.0 or higher
+- psr/log 3.0 or higher (for logging)
+- OpenSSL and JSON PHP extensions
+
 ## Configuration
 
 The SDK requires several environment variables to be set for proper operation:
 
 ```
-# Application Status (true for live, false for sandbox)
-APPLICATION_STATUS=false
-
 # M-Pesa API Credentials
 CONSUMER_KEY=your_consumer_key
 CONSUMER_SECRET=your_consumer_secret
 INITIATOR_NAME=your_initiator_name
-SECURITY_CREDENTIAL=your_security_credential
+INITIATOR_PASSWORD=your_initiator_password
 
-# B2C Settings
-PARTY_A=your_shortcode
-COMMAND_ID=BusinessPayment
-QUEUE_TIMEOUT_URL=https://your-domain.com/api/timeout
-RESULT_URL=https://your-domain.com/api/result
+# Business Shortcode
+SHORTCODE=your_shortcode
+BUSINESS_SHORTCODE=your_business_shortcode
 
 # Express (STK Push) Settings
-BUSINESS_SHORT_CODE=your_business_shortcode
-LIPA_NA_MPESA_PASSKEY=your_passkey
-TRANSACTION_TYPE=CustomerPayBillOnline
+PASSKEY=your_passkey
+
+# Callback URLs
 CALLBACK_URL=https://your-domain.com/api/callback
-ACCOUNT_REFERENCE=your_reference
-TRANSACTION_DESC=your_description
+TIMEOUT_URL=https://your-domain.com/api/timeout
+RESULT_URL=https://your-domain.com/api/result
 ```
 
 ## Features
 
 The SDK provides the following features:
+
+### API Services
 
 1. **B2C (Business to Customer)** - Send money from a business to customers
 2. **B2B (Business to Business)** - Send money from one business to another
@@ -81,30 +96,62 @@ The SDK provides the following features:
 4. **Express (STK Push)** - Prompt customers to enter their M-Pesa PIN on their phones
 5. **Account Balance** - Check account balance
 6. **Transaction Status** - Check the status of a transaction
-7. **Toolbox Utilities** - Logging, Storage, and JSON Management utilities
+7. **Transaction Reversal** - Reverse a transaction
+
+### Additional Features
+
+1. **PSR-3 Logging** - Comprehensive logging of API requests and responses
+2. **Token Caching** - Efficient caching of access tokens to reduce API calls
+3. **Enhanced Webhook Handling** - Simplified processing of M-Pesa callbacks
+4. **Custom Exceptions** - Detailed exception handling for better error management
+5. **Utilities** - Logging, Storage, JSON Management, and Helper Functions
 
 ## Usage
+
+### Initialization
+
+Initialize the MpesaAPI with your credentials:
+
+```php
+use Rndwiga\Mpesa\MpesaAPI;
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
+use Rndwiga\Mpesa\Utils\FileCache;
+
+// Create a logger (optional)
+$logger = new Logger('mpesa');
+$logger->pushHandler(new StreamHandler('path/to/mpesa.log', Logger::DEBUG));
+
+// Create a cache (optional)
+$cache = new FileCache('path/to/cache');
+
+// Initialize the Mpesa API
+$mpesa = new MpesaAPI(
+    'your_consumer_key',
+    'your_consumer_secret',
+    false, // false for sandbox, true for production
+    $logger, // optional
+    $cache  // optional
+);
+```
 
 ### B2C (Business to Customer)
 
 Send money from a business to a customer:
 
 ```php
-$response = (new MpesaB2CCalls())
-    ->setApplicationStatus(false) // false for sandbox, true for production
-    ->setInitiatorName(env('INITIATOR_NAME'))
-    ->setSecurityCredential(env('SECURITY_CREDENTIAL'))
-    ->setConsumerKey(env('CONSUMER_KEY'))
-    ->setConsumerSecret(env('CONSUMER_SECRET'))
+$response = $mpesa->b2c()
+    ->setInitiatorName('your_initiator_name')
+    ->setSecurityCredential('your_initiator_password')
     ->setCommandId('BusinessPayment') // Options: SalaryPayment, BusinessPayment, PromotionPayment
     ->setAmount(100) // Amount to send
-    ->setPartyA(env('PARTY_A')) // Your shortcode
-    ->setPartyB(254712345678) // Customer phone number
-    ->setRemarks("Payment for services") // Transaction remarks
-    ->setOccasion("Service payment") // Transaction occasion
-    ->setQueueTimeOutUrl(env('QUEUE_TIMEOUT_URL')) // Timeout URL
-    ->setResultUrl(env('RESULT_URL')) // Result URL
-    ->makeB2cCall();
+    ->setPartyA('your_shortcode') // Your shortcode
+    ->setPartyB('254712345678') // Customer phone number
+    ->setRemarks('Payment for services') // Transaction remarks
+    ->setQueueTimeoutUrl('https://example.com/timeout') // Timeout URL
+    ->setResultUrl('https://example.com/result') // Result URL
+    ->setOccasion('Service payment') // Optional: Transaction occasion
+    ->makePayment();
 ```
 
 ### B2B (Business to Business)
@@ -112,23 +159,20 @@ $response = (new MpesaB2CCalls())
 Send money from one business to another:
 
 ```php
-$response = (new \Rndwiga\Mpesa\Libraries\B2B\MpesaB2BCalls())
-    ->setApplicationStatus(false) // false for sandbox, true for production
-    ->setInitiatorName(env('INITIATOR_NAME'))
-    ->setSecurityCredential(env('SECURITY_CREDENTIAL'))
-    ->setConsumerKey(env('CONSUMER_KEY'))
-    ->setConsumerSecret(env('CONSUMER_SECRET'))
+$response = $mpesa->b2b()
+    ->setInitiatorName('your_initiator_name')
+    ->setSecurityCredential('your_initiator_password')
     ->setCommandId('BusinessPayBill') // Options: BusinessPayBill, MerchantToMerchantTransfer, etc.
     ->setAmount(100) // Amount to send
     ->setSenderIdentifierType(4) // 4 for organization shortcode
     ->setReceiverIdentifierType(4) // 4 for organization shortcode
-    ->setPartyA(env('PARTY_A')) // Your shortcode
-    ->setPartyB(600000) // Receiver shortcode
+    ->setPartyA('your_shortcode') // Your shortcode
+    ->setPartyB('600000') // Receiver shortcode
     ->setAccountReference('Account reference')
-    ->setRemarks("Payment for services") // Transaction remarks
-    ->setQueueTimeOutUrl(env('QUEUE_TIMEOUT_URL')) // Timeout URL
-    ->setResultUrl(env('RESULT_URL')) // Result URL
-    ->makeB2BCall();
+    ->setRemarks('Payment for services') // Transaction remarks
+    ->setQueueTimeoutUrl('https://example.com/timeout') // Timeout URL
+    ->setResultUrl('https://example.com/result') // Result URL
+    ->makePayment();
 ```
 
 ### C2B (Customer to Business)
@@ -136,71 +180,24 @@ $response = (new \Rndwiga\Mpesa\Libraries\B2B\MpesaB2BCalls())
 Register URLs for C2B transactions:
 
 ```php
-$response = (new \Rndwiga\Mpesa\Libraries\C2B\MpesaC2BCalls())
-    ->setApplicationStatus(false) // false for sandbox, true for production
-    ->setConsumerKey(env('CONSUMER_KEY'))
-    ->setConsumerSecret(env('CONSUMER_SECRET'))
-    ->setShortCode(env('PARTY_A')) // Your shortcode
+$response = $mpesa->c2b()
+    ->setShortCode('your_shortcode') // Your shortcode
     ->setResponseType('Completed') // Options: Completed, Cancelled
-    ->setConfirmationURL('https://your-domain.com/api/confirmation')
-    ->setValidationURL('https://your-domain.com/api/validation')
+    ->setConfirmationURL('https://example.com/confirmation')
+    ->setValidationURL('https://example.com/validation')
     ->registerURLs();
 ```
 
 Simulate a C2B transaction (for testing in sandbox):
 
 ```php
-$response = (new \Rndwiga\Mpesa\Libraries\C2B\MpesaC2BCalls())
-    ->setApplicationStatus(false) // false for sandbox, true for production
-    ->setConsumerKey(env('CONSUMER_KEY'))
-    ->setConsumerSecret(env('CONSUMER_SECRET'))
-    ->setShortCode(env('PARTY_A')) // Your shortcode
+$response = $mpesa->c2b()
+    ->setShortCode('your_shortcode') // Your shortcode
     ->setCommandID('CustomerPayBillOnline') // Options: CustomerPayBillOnline, CustomerBuyGoodsOnline
     ->setAmount(100) // Amount to send
-    ->setMSISDN(254712345678) // Customer phone number
+    ->setMsisdn('254712345678') // Customer phone number
     ->setBillRefNumber('REF123') // Reference number
-    ->simulateC2B();
-```
-
-### Account Balance
-
-Check your account balance:
-
-```php
-$response = (new \Rndwiga\Mpesa\Libraries\Account\MpesaAccountCalls())
-    ->setApplicationStatus(false) // false for sandbox, true for production
-    ->setInitiatorName(env('INITIATOR_NAME'))
-    ->setSecurityCredential(env('SECURITY_CREDENTIAL'))
-    ->setConsumerKey(env('CONSUMER_KEY'))
-    ->setConsumerSecret(env('CONSUMER_SECRET'))
-    ->setCommandId('AccountBalance')
-    ->setPartyA(env('PARTY_A')) // Your shortcode
-    ->setIdentifierType(4) // 4 for organization shortcode
-    ->setRemarks("Account balance query")
-    ->setQueueTimeOutUrl(env('QUEUE_TIMEOUT_URL')) // Timeout URL
-    ->setResultUrl(env('RESULT_URL')) // Result URL
-    ->queryAccountBalance();
-```
-
-### Transaction Status
-
-Check the status of a transaction:
-
-```php
-$response = (new \Rndwiga\Mpesa\Libraries\Account\MpesaAccountCalls())
-    ->setApplicationStatus(false) // false for sandbox, true for production
-    ->setInitiatorName(env('INITIATOR_NAME'))
-    ->setSecurityCredential(env('SECURITY_CREDENTIAL'))
-    ->setConsumerKey(env('CONSUMER_KEY'))
-    ->setConsumerSecret(env('CONSUMER_SECRET'))
-    ->setCommandId('TransactionStatusQuery')
-    ->setPartyA(env('PARTY_A')) // Your shortcode
-    ->setIdentifierType(4) // 4 for organization shortcode
-    ->setTransactionID('LKXXXX1234') // The M-Pesa Transaction ID
-    ->setRemarks("Transaction status query")
-    ->setQueueTimeOutUrl(env('QUEUE_TIMEOUT_URL')) // Timeout URL
-    ->setResultUrl(env('RESULT_URL')) // Result URL
-    ->queryTransactionStatus();
+    ->simulate();
 ```
 
 ### Express (STK Push)
@@ -208,76 +205,328 @@ $response = (new \Rndwiga\Mpesa\Libraries\Account\MpesaAccountCalls())
 Prompt a customer to enter their M-Pesa PIN on their phone:
 
 ```php
-$response = (new MpesaExpressCalls())
-    ->setApplicationStatus('sandbox') // 'sandbox' or 'live'
-    ->setConsumerKey(env('CONSUMER_KEY'))
-    ->setConsumerSecret(env('CONSUMER_SECRET'))
-    ->setBusinessShortCode(env('BUSINESS_SHORT_CODE'))
-    ->setLipaNaMpesaPasskey(env('LIPA_NA_MPESA_PASSKEY'))
+$response = $mpesa->express()
+    ->setBusinessShortCode('your_business_shortcode')
+    ->setPasskey('your_passkey')
     ->setTransactionType('CustomerPayBillOnline')
     ->setAmount(100) // Amount to charge
-    ->setPartyA(254712345678) // Customer phone number
-    ->setPartyB(env('BUSINESS_SHORT_CODE')) // Your shortcode
-    ->setPhoneNumber(254712345678) // Customer phone number
-    ->setCallBackURL(env('CALLBACK_URL')) // Callback URL
+    ->setPartyA('254712345678') // Customer phone number
+    ->setPartyB('your_business_shortcode') // Your shortcode
+    ->setPhoneNumber('254712345678') // Customer phone number
+    ->setCallbackUrl('https://example.com/callback') // Callback URL
     ->setAccountReference('Payment for order #123') // Reference
     ->setTransactionDesc('Payment for product/service') // Description
-    ->STKPush();
+    ->push();
 ```
 
-### Handling Callbacks
-
-Process B2C transaction callbacks:
+Query the status of an STK push:
 
 ```php
-$callbackData = file_get_contents('php://input');
-$response = (new B2CTransactionCallbacks())->b2CRequestCallback($callbackData);
+$response = $mpesa->express()
+    ->setBusinessShortCode('your_business_shortcode')
+    ->setPasskey('your_passkey')
+    ->query('ws_CO_DMZ_123456789_123456789');
 ```
 
-Process Express (STK Push) transaction callbacks:
+### Account Balance
+
+Check your account balance:
 
 ```php
-$callbackData = file_get_contents('php://input');
-$callbackData = json_decode($callbackData, true);
-$response = (new MpesaExpressCalls())->processTransactionResult($callbackData);
+$response = $mpesa->account()
+    ->setInitiatorName('your_initiator_name')
+    ->setSecurityCredential('your_initiator_password')
+    ->setCommandId('AccountBalance')
+    ->setPartyA('your_shortcode') // Your shortcode
+    ->setIdentifierType(4) // 4 for organization shortcode
+    ->setRemarks('Account balance query')
+    ->setQueueTimeoutUrl('https://example.com/timeout') // Timeout URL
+    ->setResultUrl('https://example.com/result') // Result URL
+    ->queryBalance();
 ```
 
-## Toolbox Utilities
+### Transaction Status
+
+Check the status of a transaction:
+
+```php
+$response = $mpesa->account()
+    ->setInitiatorName('your_initiator_name')
+    ->setSecurityCredential('your_initiator_password')
+    ->setCommandId('TransactionStatusQuery')
+    ->setPartyA('your_shortcode') // Your shortcode
+    ->setIdentifierType(4) // 4 for organization shortcode
+    ->setTransactionID('LKXXXX1234') // The M-Pesa Transaction ID
+    ->setRemarks('Transaction status query')
+    ->setQueueTimeoutUrl('https://example.com/timeout') // Timeout URL
+    ->setResultUrl('https://example.com/result') // Result URL
+    ->queryTransactionStatus();
+```
+
+### Transaction Reversal
+
+Reverse a transaction:
+
+```php
+$response = $mpesa->account()
+    ->setInitiatorName('your_initiator_name')
+    ->setSecurityCredential('your_initiator_password')
+    ->setTransactionId('LKXXXX1234')
+    ->setAmount(100) // Amount to reverse
+    ->setReceiverParty('receiver_shortcode')
+    ->setReceiverIdentifierType(Rndwiga\Mpesa\Api\Account::IDENTIFIER_TYPE_SHORTCODE)
+    ->setRemarks('Test reversal')
+    ->setQueueTimeoutUrl('https://example.com/timeout')
+    ->setResultUrl('https://example.com/result')
+    ->setOccasion('Test occasion')
+    ->reverseTransaction();
+```
+
+## Handling Callbacks
+
+### Using the WebhookHandler (Recommended)
+
+Process callbacks from M-Pesa:
+
+```php
+// Get the callback data
+$callbackData = file_get_contents('php://input');
+
+// Create a webhook handler
+$webhook = $mpesa->webhook($callbackData);
+
+// Check the callback type
+if ($webhook->isCallbackType('express')) {
+    // Handle Express (STK Push) callback
+    $resultCode = $webhook->getValue('Body.stkCallback.ResultCode');
+    $resultDesc = $webhook->getValue('Body.stkCallback.ResultDesc');
+
+    if ($resultCode == 0) {
+        // Transaction was successful
+        $amount = $webhook->getValueFromItems('Amount');
+        $receiptNumber = $webhook->getValueFromItems('MpesaReceiptNumber');
+        $transactionDate = $webhook->getValueFromItems('TransactionDate');
+        $phoneNumber = $webhook->getValueFromItems('PhoneNumber');
+
+        // Process the payment
+        // ...
+    }
+
+    // Send a success response back to Mpesa
+    echo $webhook->generateSuccessResponse('Callback processed successfully');
+} elseif ($webhook->isCallbackType('b2c')) {
+    // Handle B2C callback
+    // ...
+} elseif ($webhook->isCallbackType('c2b')) {
+    // Handle C2B callback
+    // ...
+}
+```
+
+### Alternative Method
+
+```php
+// Create a webhook handler and capture the callback data
+$webhook = $mpesa->webhook();
+$webhook->captureCallback()->parseCallback();
+
+// Check the type of callback
+if ($webhook->isCallbackType('c2b')) {
+    // Process C2B callback
+    $transactionId = $webhook->getValue('TransID');
+    $amount = $webhook->getValue('TransAmount');
+    $phoneNumber = $webhook->getValue('MSISDN');
+
+    // Do something with the data...
+
+} elseif ($webhook->isCallbackType('express')) {
+    // Process STK Push callback
+    $resultCode = $webhook->getValue('Body.stkCallback.ResultCode');
+    $resultDesc = $webhook->getValue('Body.stkCallback.ResultDesc');
+
+    // Get nested values using dot notation
+    $amount = $webhook->getValue('Body.stkCallback.CallbackMetadata.Item.0.Value');
+    $mpesaReceiptNumber = $webhook->getValue('Body.stkCallback.CallbackMetadata.Item.1.Value');
+
+    // Do something with the data...
+}
+
+// Send a success response back to Mpesa
+echo $webhook->generateSuccessResponse('Transaction processed successfully');
+
+// Or send an error response if needed
+// echo $webhook->generateErrorResponse('Transaction failed', '1');
+```
+
+### Legacy Method
+
+```php
+// For STK Push callbacks
+$callbackData = json_decode(file_get_contents('php://input'), true);
+$processedCallback = $mpesa->express()->processCallback($callbackData);
+
+// For other callbacks (B2C, B2B, Account Balance, etc.)
+$callbackData = json_decode(file_get_contents('php://input'), true);
+$processedCallback = $mpesa->account()->processCallback($callbackData);
+
+// Send a success response back to Mpesa
+echo $mpesa->finishTransaction();
+```
+
+## Utilities
 
 ### Logging
 
-Log information to files:
+The SDK includes multiple logging options:
+
+#### Using PSR-3 Compatible Logger
 
 ```php
-(new AppLogger('folderName', 'fileName'))
-    ->setMaxNumberOfLines(5000) // Optional: Set max lines in log file
-    ->logInfo(['key' => 'value', 'message' => 'Log message']);
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
+
+$logger = new Logger('mpesa');
+$logger->pushHandler(new StreamHandler('path/to/mpesa.log', Logger::DEBUG));
+
+// Use the logger with the MpesaAPI
+$mpesa = new MpesaAPI(
+    'your_consumer_key',
+    'your_consumer_secret',
+    false,
+    $logger
+);
+
+// The logger will automatically log API requests and responses
+```
+
+#### Using the Built-in Logger
+
+```php
+use Rndwiga\Mpesa\Utils\Logger;
+
+// Create a logger with folder and file name
+$logger = new Logger('mpesa_logs', 'transactions');
+
+// Log data at different levels
+$logger->logDebugData(['transaction_id' => '123456', 'status' => 'pending']);
+$logger->logInfoData(['message' => 'Payment received', 'amount' => 1000]);
+$logger->logWarningData(['message' => 'Retry attempt', 'attempt' => 3]);
+$logger->logErrorData(['message' => 'Transaction failed', 'reason' => 'Timeout']);
+
+// Or use PSR-3 methods
+$logger->debug('Debug message', ['context' => 'value']);
+$logger->info('Info message', ['context' => 'value']);
+$logger->warning('Warning message', ['context' => 'value']);
+$logger->error('Error message', ['context' => 'value']);
+
+// Get the log file path
+$logFilePath = $logger->getLogFile('log'); // Returns path to transactions.log
 ```
 
 ### Storage
 
-Create storage directories:
+The SDK includes multiple storage options:
+
+#### Using File Cache
 
 ```php
-$storagePath = (new AppStorage())
-    ->setRootFolder('customFolder') // Optional: Default is 'appLogs'
-    ->setLogFolder('subFolder')
-    ->createStorage();
+use Rndwiga\Mpesa\Utils\FileCache;
+
+$cache = new FileCache('path/to/cache');
+
+// Use the cache with the MpesaAPI
+$mpesa = new MpesaAPI(
+    'your_consumer_key',
+    'your_consumer_secret',
+    false,
+    null,
+    $cache
+);
+
+// The cache will automatically store access tokens
+```
+
+#### Using the Storage Class
+
+```php
+use Rndwiga\Mpesa\Utils\Storage;
+
+// Create a storage instance
+$storage = new Storage('mpesa_data');
+$storage->setLogFolder('transactions');
+
+// Create a storage path
+$path = $storage->createStorage();
+
+// Get the full storage path
+$fullPath = $storage->storagePath($path);
+
+// Compress a file
+$compressedFile = Storage::gzCompressFile('path/to/file.txt', 9, true);
+
+// Generate a random ID
+$randomId = Storage::generateRandomId();
 ```
 
 ### JSON Management
 
-Save and read JSON data:
+The SDK includes utilities for working with JSON data:
+
+#### Using WebhookHandler
 
 ```php
-// Save JSON data to file
-AppJsonManager::saveToFile('data.json', 'directoryName', ['key' => 'value']);
+use Rndwiga\Mpesa\Utils\WebhookHandler;
 
-// Read JSON data from file
-$data = AppJsonManager::readJsonFile('path/to/file.json', true); // true to return as array
+// Parse JSON data
+$webhook = new WebhookHandler();
+$webhook->captureCallback($jsonData);
+$webhook->parseCallback();
+
+// Extract values using dot notation
+$value = $webhook->getValue('path.to.value');
+
+// Generate JSON responses
+$response = $webhook->generateSuccessResponse('Success message');
+```
+
+#### Using JsonManager
+
+```php
+use Rndwiga\Mpesa\Utils\JsonManager;
+
+// Save data to a JSON file
+$result = JsonManager::saveToFile('data.json', 'transactions', ['id' => 123, 'amount' => 1000]);
+
+// Save data to a specific file path
+$result = JsonManager::saveToFilePath('/path/to/file.json', ['id' => 123, 'amount' => 1000]);
+
+// Read a JSON file
+$data = JsonManager::readJsonFile('/path/to/file.json', true);
+
+// Add data to an existing JSON file
+$result = JsonManager::addDataToJsonFile('/path/to/file.json', ['id' => 456, 'amount' => 2000]);
 
 // Validate JSON data
-$result = AppJsonManager::validateJsonData('{"key": "value"}');
+$validation = JsonManager::validateJsonData('{"id": 123, "amount": 1000}');
+if ($validation['status'] === 'success') {
+    // JSON is valid
+    $data = $validation['response'];
+}
+```
+
+### Helper Functions
+
+The SDK includes helper functions for common tasks:
+
+```php
+use function Rndwiga\Mpesa\Utils\env;
+use function Rndwiga\Mpesa\Utils\str_slug;
+
+// Get an environment variable
+$apiKey = env('MPESA_API_KEY');
+
+// Convert a string to a URL-friendly slug
+$slug = str_slug('Hello World'); // Returns 'hello-world'
 ```
 
 ## Error Handling
@@ -285,12 +534,175 @@ $result = AppJsonManager::validateJsonData('{"key": "value"}');
 The SDK provides detailed error handling for API responses:
 
 ```php
-$response = json_decode($apiResponse, true);
-if (isset($response['errorCode'])) {
-    $errorDetails = (new MpesaExpressCalls())->responseErrorDetails($response);
-    // Handle error based on errorDetails
+try {
+    $response = $mpesa->express()->push();
+
+    if (isset($response['success']) && $response['success']) {
+        // Request was successful
+        $checkoutRequestId = $response['data']->CheckoutRequestID;
+        // ...
+    } else {
+        // Request failed
+        $errorMessage = $response['errorMessage'] ?? 'Unknown error';
+        // Handle the error
+    }
+} catch (\Exception $e) {
+    // Handle exceptions
+    $errorMessage = $e->getMessage();
+    // ...
 }
 ```
+
+The package also provides custom exception classes for better error handling:
+
+```php
+use Rndwiga\Mpesa\Exceptions\MpesaException;
+use Rndwiga\Mpesa\Exceptions\AuthenticationException;
+use Rndwiga\Mpesa\Exceptions\ValidationException;
+use Rndwiga\Mpesa\Exceptions\ApiException;
+
+try {
+    // Make an API request
+    $response = $mpesa->b2c()
+        ->setInitiatorName('your_initiator_name')
+        ->setSecurityCredential('your_initiator_password')
+        ->setCommandId(Rndwiga\Mpesa\Api\B2C::COMMAND_ID_BUSINESS_PAYMENT)
+        ->setAmount(100)
+        ->setPartyA('your_shortcode')
+        ->setPartyB('254722000000')
+        ->setRemarks('Test payment')
+        ->setQueueTimeoutUrl('https://example.com/timeout')
+        ->setResultUrl('https://example.com/result')
+        ->setOccasion('Test occasion')
+        ->makePayment();
+
+    // Check if the request was successful
+    if (!$response['success']) {
+        // Handle API error
+        echo "API Error: " . $response['errorMessage'];
+    }
+
+} catch (AuthenticationException $e) {
+    // Handle authentication errors (e.g., invalid credentials)
+    echo "Authentication Error: " . $e->getMessage();
+
+} catch (ValidationException $e) {
+    // Handle validation errors (e.g., invalid phone number)
+    echo "Validation Error: " . $e->getMessage();
+
+} catch (ApiException $e) {
+    // Handle API-specific errors
+    echo "API Error: " . $e->getMessage();
+    echo "API Error Code: " . $e->getApiErrorCode();
+    echo "Request ID: " . $e->getRequestId();
+
+    // Get additional error data if available
+    $errorData = $e->getErrorData();
+    if ($errorData) {
+        // Process error data
+    }
+
+} catch (MpesaException $e) {
+    // Handle other Mpesa-related errors
+    echo "Mpesa Error: " . $e->getMessage();
+
+} catch (\Exception $e) {
+    // Handle other unexpected errors
+    echo "Error: " . $e->getMessage();
+}
+```
+
+## Custom Implementations
+
+### Custom Cache Implementation
+
+You can create your own cache implementation by implementing the `CacheInterface`:
+
+```php
+use Rndwiga\Mpesa\Utils\CacheInterface;
+
+class RedisCache implements CacheInterface
+{
+    private $redis;
+
+    public function __construct($redisClient)
+    {
+        $this->redis = $redisClient;
+    }
+
+    public function get(string $key, $default = null)
+    {
+        $value = $this->redis->get($key);
+        return $value !== false ? json_decode($value, true) : $default;
+    }
+
+    public function set(string $key, $value, ?int $ttl = null): bool
+    {
+        return $this->redis->setex($key, $ttl ?? 3600, json_encode($value));
+    }
+
+    public function has(string $key): bool
+    {
+        return $this->redis->exists($key);
+    }
+
+    public function delete(string $key): bool
+    {
+        return $this->redis->del($key) > 0;
+    }
+}
+
+// Use your custom cache implementation
+$redis = new Redis();
+$redis->connect('127.0.0.1', 6379);
+$cache = new RedisCache($redis);
+
+$mpesa = new MpesaAPI(
+    'your_consumer_key',
+    'your_consumer_secret',
+    false,
+    $logger,
+    $cache
+);
+```
+
+## Examples
+
+Check the `examples` directory for more detailed examples:
+
+- `b2c_example.php`: Example of B2C payment
+- `b2b_example.php`: Example of B2B payment
+- `c2b_example.php`: Example of C2B registration and simulation
+- `express_example.php`: Example of STK Push and callback processing
+- `account_balance_example.php`: Example of checking account balance
+- `transaction_status_example.php`: Example of checking transaction status
+- `transaction_reversal_example.php`: Example of reversing a transaction
+- `webhook_example.php`: Example of using the WebhookHandler to process callbacks
+
+All examples demonstrate the use of logging, caching, and webhook handling features.
+
+## Testing
+
+The package includes comprehensive tests for all components using PestPHP, a delightful testing framework for PHP:
+
+```bash
+composer test
+```
+
+You can also run the tests directly:
+
+```bash
+./vendor/bin/pest
+```
+
+Or run specific test files:
+
+```bash
+./vendor/bin/pest tests/Client/MpesaClientTest.php
+./vendor/bin/pest tests/Utils/WebhookHandlerTest.php
+```
+
+PestPHP provides a more expressive and elegant syntax for writing tests. For more information, visit [pestphp.com](https://pestphp.com).
 
 ## Contributing
 

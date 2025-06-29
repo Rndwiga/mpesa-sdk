@@ -6,7 +6,7 @@
  * and simulate a C2B transaction (simulation only works in sandbox).
  */
 
-require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../bootstrap.php';
 
 use Rndwiga\Mpesa\MpesaAPI;
 use Monolog\Logger;
@@ -17,16 +17,16 @@ use Rndwiga\Mpesa\Api\C2B;
 $logger = new Logger('mpesa');
 $logger->pushHandler(new StreamHandler(__DIR__ . '/mpesa.log', Logger::DEBUG));
 
-// Replace these with your actual credentials
-$consumerKey = 'your_consumer_key';
-$consumerSecret = 'your_consumer_secret';
-$shortcode = 'your_shortcode';
+// Get credentials from environment variables
+$consumerKey = getenv('MPESA_C2B_CONSUMER_KEY') ?: getenv('CONSUMER_KEY');
+$consumerSecret = getenv('MPESA_C2B_CONSUMER_SECRETE') ?: getenv('CONSUMER_SECRET');
+$shortcode = getenv('MPESA_C2B_SHORT_CODE') ?: getenv('PARTY_A');
 
 // Initialize the Mpesa API with logger
 $mpesa = new MpesaAPI(
     $consumerKey,
     $consumerSecret,
-    false, // false for sandbox, true for production
+    getenv('MPESA_C2B_INTEGRATION_STATUS') === 'true' || getenv('APPLICATION_STATUS') === 'true', // false for sandbox, true for production
     $logger
 );
 
@@ -37,8 +37,8 @@ try {
     $response = $mpesa->c2b()
         ->setShortcode($shortcode)
         ->setResponseType(C2B::RESPONSE_TYPE_COMPLETED)
-        ->setConfirmationUrl('https://example.com/confirmation')
-        ->setValidationUrl('https://example.com/validation')
+        ->setConfirmationUrl(getenv('MPESA_C2B_RESULT_URL') ?: getenv('RESULT_URL'))
+        ->setValidationUrl(getenv('MPESA_CALLBACK_URL') ?: getenv('QUEUE_TIMEOUT_URL'))
         ->registerUrls();
 
     // Print the response
@@ -118,7 +118,7 @@ $webhook->parseCallback();
 // Check if it's a C2B callback
 if ($webhook->isCallbackType('c2b')) {
     echo "Received C2B callback\n";
-    
+
     // Extract key information
     $transactionId = $webhook->getValue('TransID');
     $transactionType = $webhook->getValue('TransactionType');
@@ -128,7 +128,7 @@ if ($webhook->isCallbackType('c2b')) {
     $billRefNumber = $webhook->getValue('BillRefNumber');
     $phoneNumber = $webhook->getValue('MSISDN');
     $firstName = $webhook->getValue('FirstName');
-    
+
     echo "Transaction ID: $transactionId\n";
     echo "Transaction Type: $transactionType\n";
     echo "Transaction Time: $transactionTime\n";
@@ -137,12 +137,12 @@ if ($webhook->isCallbackType('c2b')) {
     echo "Bill Reference Number: $billRefNumber\n";
     echo "Phone Number: $phoneNumber\n";
     echo "Customer Name: $firstName\n";
-    
+
     // In a real application, you would:
     // 1. Verify the transaction against your records
     // 2. Update your database
     // 3. Fulfill the customer's order
-    
+
     // Send a success response back to Mpesa
     echo "\nResponse to Mpesa: " . $webhook->generateSuccessResponse('C2B transaction processed successfully') . "\n";
 } else {
@@ -158,10 +158,10 @@ function handleValidationCallback($mpesa, $callbackData) {
     // 1. Verify the account number (BillRefNumber)
     // 2. Check if the account is active
     // 3. Check if the amount is acceptable
-    
+
     // For this example, we'll accept all transactions
     $isValid = true;
-    
+
     if ($isValid) {
         // Accept the transaction
         return $mpesa->webhook()->generateSuccessResponse('Transaction is valid');

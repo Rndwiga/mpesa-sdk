@@ -1,16 +1,16 @@
 <?php
 /**
- * AppStorage Class
+ * Storage
  *
  * A class for managing storage paths and operations.
  *
- * @package Rndwiga\Toolbox\Infrastructure\Services
- * @author Raphael Ndwiga <raphndwi@gmail.com>
+ * @package Rndwiga\Mpesa\Utils
+ * @author Raphael Ndwiga <raphael@raphaelndwiga.africa>
  */
 
-namespace Rndwiga\Toolbox\Infrastructure\Services;
+namespace Rndwiga\Mpesa\Utils;
 
-class AppStorage
+class Storage
 {
     /**
      * The root folder name
@@ -34,11 +34,11 @@ class AppStorage
     private $useDate = true;
 
     /**
-     * AppStorage constructor.
+     * Storage constructor.
      *
      * @param string $rootFolder The root folder name
      */
-    public function __construct($rootFolder = 'appLogs')
+    public function __construct($rootFolder = 'mpesaLogs')
     {
         $this->setRootFolder($rootFolder);
     }
@@ -57,9 +57,9 @@ class AppStorage
      * Set the root folder name
      *
      * @param string $rootFolder The root folder name
-     * @return AppStorage
+     * @return Storage
      */
-    public function setRootFolder($rootFolder = 'appLogs')
+    public function setRootFolder($rootFolder = 'mpesaLogs')
     {
         $this->rootFolder = $rootFolder;
         return $this;
@@ -79,7 +79,7 @@ class AppStorage
      * Set the log folder name
      *
      * @param string $logFolder The log folder name
-     * @return AppStorage
+     * @return Storage
      */
     public function setLogFolder($logFolder)
     {
@@ -101,7 +101,7 @@ class AppStorage
      * Set whether to use date in the path
      *
      * @param bool $useDate Whether to use date in the path
-     * @return AppStorage
+     * @return Storage
      */
     public function setUseDate($useDate)
     {
@@ -143,7 +143,7 @@ class AppStorage
         $folder .= $this->getLogFolder();
 
         // Create the directory if it doesn't exist
-        $fullPath = storagePath($folder);
+        $fullPath = $this->storagePath($folder);
 
         if (!is_dir($fullPath)) {
             if (!mkdir($fullPath, 0777, true)) {
@@ -152,6 +152,21 @@ class AppStorage
         }
 
         return $folder;
+    }
+
+    /**
+     * Get the storage path for a given file or directory
+     *
+     * @param string|null $path The path to append to the storage path
+     * @return string The full storage path
+     */
+    public function storagePath(string $path = null): string
+    {
+        if (function_exists('storage_path')) {
+            // Use Laravel's storage_path if available
+            return storage_path($path);
+        }
+        return __DIR__ . ($path ?? '');
     }
 
     /**
