@@ -1,6 +1,5 @@
 {
     "name": "rndwiga/mpesa-sdk",
-    "version": "1.0.0",
     "type": "package",
     "description": "An expressive mpesa implementation",
     "keywords": ["ai", "rndwiga","mpesa"],
@@ -12,7 +11,7 @@
     ],
     "require": {
         "php": "^8.1",
-        "monolog/monolog": "^2.0",
+        "monolog/monolog": "^3.9",
         "vlucas/phpdotenv": "^3.4",
         "phpseclib/phpseclib": "^2.0",
         "ramsey/uuid": "^3.8",
@@ -24,7 +23,6 @@
     },
     "license": "MIT",
     "minimum-stability": "dev",
-    "prefer-stable": true,
     "require-dev": {
         "pestphp/pest": "3.x-dev",
         "mockery/mockery": "2.0.x-dev"
