@@ -23,7 +23,6 @@
     },
     "license": "MIT",
     "minimum-stability": "dev",
-    "prefer-stable": true,
     "require-dev": {
         "pestphp/pest": "3.x-dev",
         "mockery/mockery": "2.0.x-dev"
