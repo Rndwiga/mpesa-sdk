@@ -1,5 +1,6 @@
 {
-    "name": "rndwiga/mpesa",
+    "name": "rndwiga/mpesa-sdk",
+    "version": "1.0.0",
     "type": "package",
     "description": "An expressive mpesa implementation",
     "keywords": ["ai", "rndwiga","mpesa"],
