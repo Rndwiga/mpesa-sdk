@@ -42,7 +42,7 @@ An opinionated fluent Safaricom M-Pesa SDK that provides a simple and elegant wa
 Install the package via Composer:
 
 ```bash
-composer require rndwiga/mpesa
+composer require rndwiga/mpesa-sdk
 ```
 
 Or clone the project:
